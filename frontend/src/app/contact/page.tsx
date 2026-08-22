@@ -15,19 +15,19 @@ export default function ContactPage() {
       <main className="flex-1 py-16 sm:py-24">
         <Container size="narrow">
           <SectionHeading
-            eyebrow="GET IN TOUCH"
-            title="Questions About CivicPulse?"
-            subtitle="For project information, technical documentation, or deployment inquiries, use the verified repository resources below."
+            eyebrow="CITIZEN SUPPORT"
+            title="Contact &amp; Assistance"
+            subtitle="Access public portal services, report infrastructure issues, or log into the municipal staff portal below."
             align="center"
           />
 
           <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-8 max-w-2xl mx-auto">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="font-serif-civic text-2xl font-bold text-[#161616]">
-                Verified Open Resources
+                Civic Services Access
               </h3>
               <p className="font-sans text-sm text-[#5D5A55] leading-relaxed">
-                CivicPulse is an open-source civic intelligence platform codebase. Technical specifications, API documentation, and security verification suites are publicly accessible in the repository.
+                CivicPulse provides automated complaint triage and transparent status tracking for municipal infrastructure services. Select an action below to access services.
               </p>
             </div>
 
@@ -35,35 +35,15 @@ export default function ContactPage() {
               <div className="p-4 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm flex items-center justify-between">
                 <div>
                   <h4 className="font-serif-civic font-bold text-lg text-[#161616]">
-                    GitHub Repository
+                    Report an Issue
                   </h4>
                   <p className="font-sans text-xs text-[#5D5A55]">
-                    Source code, commit history, and release documentation
+                    Submit anonymous complaints with optional location details
                   </p>
                 </div>
-                <a
-                  href="https://github.com/ananyarajkamal/CivicPulse"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <Link href="/#submit-complaint">
                   <Button variant="dark" size="sm">
-                    Open GitHub ↗
-                  </Button>
-                </a>
-              </div>
-
-              <div className="p-4 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm flex items-center justify-between">
-                <div>
-                  <h4 className="font-serif-civic font-bold text-lg text-[#161616]">
-                    Citizen Portal
-                  </h4>
-                  <p className="font-sans text-xs text-[#5D5A55]">
-                    Submit anonymous complaints or track existing status
-                  </p>
-                </div>
-                <Link href="/">
-                  <Button variant="outline" size="sm">
-                    Go to Portal →
+                    Report Now →
                   </Button>
                 </Link>
               </div>
@@ -71,10 +51,26 @@ export default function ContactPage() {
               <div className="p-4 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm flex items-center justify-between">
                 <div>
                   <h4 className="font-serif-civic font-bold text-lg text-[#161616]">
-                    Municipal Operations Sign In
+                    Track Existing Complaint
                   </h4>
                   <p className="font-sans text-xs text-[#5D5A55]">
-                    Authorized staff sign-in for triage &amp; resolution
+                    View real-time status using your 25-character Tracking ID
+                  </p>
+                </div>
+                <Link href="/#track">
+                  <Button variant="outline" size="sm">
+                    Track Status →
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="p-4 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm flex items-center justify-between">
+                <div>
+                  <h4 className="font-serif-civic font-bold text-lg text-[#161616]">
+                    Municipal Staff Portal
+                  </h4>
+                  <p className="font-sans text-xs text-[#5D5A55]">
+                    Authorized staff sign-in for complaint triage &amp; resolution
                   </p>
                 </div>
                 <Link href="/auth/login">

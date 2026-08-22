@@ -27,16 +27,29 @@ class Base(DeclarativeBase):
     pass
 
 
-# ---------------------------------------------------------------------------
-# Create async engine singleton
-# ---------------------------------------------------------------------------
+import re
+
 _settings = get_settings()
+_db_url = _settings.DATABASE_URL
+
+# Auto-strip brackets around password if present (e.g. postgres:[pass]@host)
+_m = re.match(r"^(postgresql(?:\+asyncpg)?://[^:]+:)(\[[^\]]+\])(@.+)$", _db_url)
+if _m:
+    _db_url = _m.group(1) + _m.group(2)[1:-1] + _m.group(3)
+
+if _db_url.startswith("postgresql://"):
+    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
 engine: AsyncEngine = create_async_engine(
-    _settings.DATABASE_URL,
+    _db_url,
     echo=_settings.DEBUG,
     future=True,
-    pool_pre_ping=True,  # Test connections before handing out from pool
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=1800,
+    pool_pre_ping=False,
 )
 
 # Async session factory

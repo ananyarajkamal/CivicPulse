@@ -32,7 +32,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        SQLEnum(UserRole, name="user_role_enum", create_type=False),
+        SQLEnum(UserRole, name="user_role_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
     )
     department_id: Mapped[uuid.UUID | None] = mapped_column(

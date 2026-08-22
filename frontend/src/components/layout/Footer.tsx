@@ -11,19 +11,48 @@ export const Footer: React.FC = () => {
           <div className="md:col-span-5 space-y-4">
             <Logo variant="darkFooter" size="lg" showTagline />
             <p className="font-sans text-sm text-[#D6CFC3] leading-relaxed max-w-sm pt-2">
-              Building transparent, accountable, and smarter city operations through technology and trust. CivicPulse connects citizens directly to municipal governance.
+              Building transparent, accountable, and responsive city operations through municipal coordination and citizen trust.
             </p>
           </div>
 
           {/* Column 2: Quick Links */}
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-3 space-y-4">
             <h4 className="font-sans text-xs font-semibold tracking-widest text-[#B7A58A] uppercase">
-              Quick Links
+              Navigation
             </h4>
             <ul className="space-y-2.5 font-sans text-sm text-[#D6CFC3]">
               <li>
-                <Link href="/" className="hover:text-[#FBFAF7] transition-colors">
-                  Home
+                <Link href="/about" className="hover:text-[#FBFAF7] transition-colors">
+                  About CivicPulse
+                </Link>
+              </li>
+              <li>
+                <Link href="/#how-it-works" className="hover:text-[#FBFAF7] transition-colors">
+                  How It Works
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-[#FBFAF7] transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/accessibility" className="hover:text-[#FBFAF7] transition-colors">
+                  Accessibility
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Citizen Services */}
+          <div className="md:col-span-4 space-y-4">
+            <h4 className="font-sans text-xs font-semibold tracking-widest text-[#B7A58A] uppercase">
+              Citizen Services
+            </h4>
+            <ul className="space-y-2.5 font-sans text-sm text-[#D6CFC3]">
+              <li>
+                <Link href="/#submit-complaint" className="hover:text-[#FBFAF7] transition-colors">
+                  Report an Issue
                 </Link>
               </li>
               <li>
@@ -32,71 +61,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="hover:text-[#FBFAF7] transition-colors">
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-[#FBFAF7] transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
                 <Link href="/contact" className="hover:text-[#FBFAF7] transition-colors">
-                  Contact &amp; Resources
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Resources */}
-          <div className="md:col-span-3 space-y-4">
-            <h4 className="font-sans text-xs font-semibold tracking-widest text-[#B7A58A] uppercase">
-              Resources &amp; Legal
-            </h4>
-            <ul className="space-y-2.5 font-sans text-sm text-[#D6CFC3]">
-              <li>
-                <Link href="/#how-it-works" className="hover:text-[#FBFAF7] transition-colors">
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-[#FBFAF7] transition-colors">
-                  System Architecture
-                </Link>
-              </li>
-              <li>
-                <a
-                  href="https://github.com/ananyarajkamal/CivicPulse"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#FBFAF7] transition-colors inline-flex items-center gap-1"
-                >
-                  GitHub Repository ↗
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 4: Platform */}
-          <div className="md:col-span-2 space-y-4">
-            <h4 className="font-sans text-xs font-semibold tracking-widest text-[#B7A58A] uppercase">
-              Platform
-            </h4>
-            <ul className="space-y-2.5 font-sans text-sm text-[#D6CFC3]">
-              <li>
-                <Link href="/" className="hover:text-[#FBFAF7] transition-colors">
-                  Citizen Portal
+                  Contact &amp; Support
                 </Link>
               </li>
               <li>
                 <Link href="/auth/login" className="hover:text-[#FBFAF7] transition-colors">
-                  Municipal Officers
-                </Link>
-              </li>
-              <li>
-                <Link href="/dashboard#intelligence" className="hover:text-[#FBFAF7] transition-colors">
-                  City Intelligence
+                  Staff Portal
                 </Link>
               </li>
             </ul>
@@ -105,9 +76,9 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between font-sans text-xs text-[#5D5A55] gap-4">
-          <p>© 2026 CivicPulse. All rights reserved.</p>
+          <p>© 2026 CivicPulse Platform. All rights reserved.</p>
           <p className="text-[#D6CFC3]/80">
-            Open Civic Governance &amp; AI Intelligence Infrastructure
+            Accountable Public Administration &amp; Resolution Infrastructure
           </p>
         </div>
       </div>

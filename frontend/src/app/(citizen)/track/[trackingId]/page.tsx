@@ -50,10 +50,10 @@ export default function TrackingPage({
       })
       .catch((err: unknown) => {
         if (isMounted) {
-          if (err instanceof Error) {
-            setError(err.message);
+          if (err instanceof Error && err.message.includes("not found")) {
+            setError("We couldn't find a complaint with this tracking ID. Please check the ID and try again.");
           } else {
-            setError("We could not find a complaint matching that tracking ID. Please check the ID and try again.");
+            setError("We're unable to access complaint tracking right now. Please try again shortly.");
           }
         }
       })
@@ -128,7 +128,7 @@ export default function TrackingPage({
           {loading && (
             <Card variant="primary" padding="lg" className="text-center py-16 space-y-4 shadow-civic">
               <div className="w-8 h-8 border-2 border-[#B7A58A] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="font-sans text-sm text-[#5D5A55]">Retrieving complaint details...</p>
+              <p className="font-sans text-sm font-medium text-[#161616]">Looking up your complaint...</p>
             </Card>
           )}
 
@@ -140,10 +140,10 @@ export default function TrackingPage({
               </div>
               <div className="space-y-2">
                 <h3 className="font-serif-civic text-2xl font-bold text-[#161616]">
-                  Complaint Not Found
+                  Unable to Retrieve Complaint
                 </h3>
-                <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto">
-                  We could not find a complaint matching that tracking ID. Please check the ID and try again.
+                <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto leading-relaxed">
+                  {error}
                 </p>
                 <div className="bg-[#F5F1E8] p-2 rounded border border-[#D6CFC3] inline-block font-mono text-xs text-[#5D5A55]">
                   ID: {trackingId}

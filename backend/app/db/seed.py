@@ -151,7 +151,7 @@ async def seed_database(db: AsyncSession) -> dict[str, int]:
             cat = ComplaintCategory(
                 name=str(c_data["name"]),
                 department_id=dept_obj.id,
-                default_priority=c_data["priority"],
+                default_priority=c_data["priority"].value if hasattr(c_data["priority"], "value") else str(c_data["priority"]).lower(),
                 default_sla_hours=int(str(c_data["sla"])),
                 keywords=c_data["keywords"],
             )

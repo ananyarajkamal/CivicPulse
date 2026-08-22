@@ -24,7 +24,7 @@ export default function NotFound() {
                 404
               </span>
               <h1 className="font-serif-civic text-3xl font-bold text-[#161616]">
-                This Route Doesn&apos;t Lead Anywhere.
+                Page Not Found
               </h1>
               <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto">
                 The page you are looking for may have moved, been renamed, or may no longer exist on this platform.

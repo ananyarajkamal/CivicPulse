@@ -41,13 +41,27 @@ if alembic_config.config_file_name is not None:
 # Override DATABASE_URL from environment — never use alembic.ini value
 # -----------------------------------------------------------------------
 database_url = os.environ.get("DATABASE_URL")
+if not database_url:
+    from app.config import get_settings
+    database_url = get_settings().DATABASE_URL
+
 if database_url:
+    import re
+    m_pwd = re.match(r"^(postgresql(?:\+asyncpg)?://[^:]+:)(\[[^\]]+\])(@.+)$", database_url)
+    if m_pwd:
+        database_url = m_pwd.group(1) + m_pwd.group(2)[1:-1] + m_pwd.group(3)
+
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
     alembic_config.set_main_option("sqlalchemy.url", database_url)
 
 # -----------------------------------------------------------------------
 # Target metadata for --autogenerate
 # -----------------------------------------------------------------------
-from app.models import Base  # noqa: E402
+from app.database import Base  # noqa: E402
+from app import models  # noqa: F401
 
 target_metadata = Base.metadata
 

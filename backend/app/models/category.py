@@ -29,7 +29,7 @@ class ComplaintCategory(Base):
         nullable=False,
     )
     default_priority: Mapped[ComplaintPriority] = mapped_column(
-        SQLEnum(ComplaintPriority, name="priority_enum", create_type=False),
+        SQLEnum(ComplaintPriority, name="priority_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
         default=ComplaintPriority.MEDIUM,
     )

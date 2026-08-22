@@ -12,11 +12,10 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: "Home", href: "/" },
+    { name: "Report an Issue", href: "/#submit-complaint" },
     { name: "Track Complaint", href: "/#track" },
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Analytics", href: "/dashboard#intelligence" },
-    { name: "About Us", href: "/about" },
-    { name: "Contact", href: "/contact" },
+    { name: "About", href: "/about" },
+    { name: "Staff Login", href: "/auth/login" },
   ];
 
   const isActive = (href: string) => {
@@ -31,11 +30,13 @@ export const Navbar: React.FC = () => {
         {/* Left: Brand Logo */}
         <Logo variant="compact" size="md" />
 
-        {/* Right: Desktop Navigation Links & Staff Login CTA */}
+        {/* Right: Desktop Navigation Links */}
         <div className="hidden md:flex items-center gap-6">
-          <nav className="flex items-center gap-5">
+          <nav className="flex items-center gap-6">
             {navLinks.map((link) => {
               const active = isActive(link.href);
+              if (link.name === "Staff Login") return null;
+
               return (
                 <Link
                   key={link.name}
@@ -84,7 +85,7 @@ export const Navbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Mobile Slide-down Sheet Menu */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-[#FBFAF7] border-b border-[#D6CFC3] px-6 py-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
           <nav className="flex flex-col space-y-3">
@@ -99,14 +100,6 @@ export const Navbar: React.FC = () => {
               </Link>
             ))}
           </nav>
-
-          <div className="pt-2">
-            <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="dark" size="md" className="w-full justify-center">
-                Staff Login →
-              </Button>
-            </Link>
-          </div>
         </div>
       )}
     </header>

@@ -29,11 +29,11 @@ class ComplaintStatusHistory(Base):
         index=True,
     )
     from_status: Mapped[ComplaintStatus | None] = mapped_column(
-        SQLEnum(ComplaintStatus, name="status_enum", create_type=False),
+        SQLEnum(ComplaintStatus, name="status_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=True,
     )
     to_status: Mapped[ComplaintStatus] = mapped_column(
-        SQLEnum(ComplaintStatus, name="status_enum", create_type=False),
+        SQLEnum(ComplaintStatus, name="status_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
     )
     changed_by: Mapped[uuid.UUID | None] = mapped_column(

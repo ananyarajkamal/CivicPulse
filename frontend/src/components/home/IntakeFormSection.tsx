@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Card } from "@/components/ui/Card";
@@ -19,6 +20,8 @@ import {
 } from "@/lib/api/public";
 
 export const IntakeFormSection: React.FC = () => {
+  const router = useRouter();
+
   // Form fields
   const [rawText, setRawText] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -38,6 +41,10 @@ export const IntakeFormSection: React.FC = () => {
   // Lists state
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [errorDepartments, setErrorDepartments] = useState(false);
+  const [errorCategories, setErrorCategories] = useState(false);
 
   // Submission & UI State
   const [loading, setLoading] = useState(false);
@@ -48,9 +55,33 @@ export const IntakeFormSection: React.FC = () => {
 
   // Load departments and categories on mount
   useEffect(() => {
-    fetchDepartmentsApi().then(setDepartments);
-    fetchCategoriesApi().then(setCategories);
+    fetchDepartmentsApi()
+      .then((data) => {
+        setDepartments(data);
+      })
+      .catch(() => {
+        setErrorDepartments(true);
+      })
+      .finally(() => {
+        setLoadingDepartments(false);
+      });
+
+    fetchCategoriesApi()
+      .then((data) => {
+        setCategories(data);
+      })
+      .catch(() => {
+        setErrorCategories(true);
+      })
+      .finally(() => {
+        setLoadingCategories(false);
+      });
   }, []);
+
+  // Filter categories by selected department if department is chosen
+  const filteredCategories = departmentId
+    ? categories.filter((c) => c.department_id === departmentId)
+    : categories;
 
   // Geocode address search handler
   const handleSearchAddress = async (query: string) => {
@@ -98,7 +129,15 @@ export const IntakeFormSection: React.FC = () => {
     );
   };
 
-  // Submission handler
+  // Tracking search submission handler
+  const handleTrackSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (trackSearchId.trim()) {
+      router.push(`/track/${encodeURIComponent(trackSearchId.trim())}`);
+    }
+  };
+
+  // Complaint submission handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -149,7 +188,7 @@ export const IntakeFormSection: React.FC = () => {
         {/* Track Complaint Bar */}
         <div id="track" className="scroll-mt-24 mb-16">
           <Card variant="secondary" padding="lg" className="border-[#D6CFC3]">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <form onSubmit={handleTrackSubmit} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="space-y-1 max-w-xl">
                 <div className="flex items-center gap-2">
                   <TrackingIcon className="w-5 h-5 text-[#292724]" />
@@ -172,26 +211,19 @@ export const IntakeFormSection: React.FC = () => {
                   placeholder="CP-..."
                   value={trackSearchId}
                   onChange={(e) => setTrackSearchId(e.target.value)}
-                  className="flex-1 md:w-64 px-3.5 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+                  className="flex-1 md:w-64 px-3.5 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
                 />
-                <Link
-                  href={
-                    trackSearchId.trim()
-                      ? `/track/${encodeURIComponent(trackSearchId.trim())}`
-                      : "#"
-                  }
+                <Button
+                  type="submit"
+                  variant="dark"
+                  size="md"
+                  disabled={!trackSearchId.trim()}
+                  className="whitespace-nowrap"
                 >
-                  <Button
-                    variant="dark"
-                    size="md"
-                    disabled={!trackSearchId.trim()}
-                    className="whitespace-nowrap"
-                  >
-                    Track Status
-                  </Button>
-                </Link>
+                  Track Status
+                </Button>
               </div>
-            </div>
+            </form>
           </Card>
         </div>
 
@@ -215,7 +247,7 @@ export const IntakeFormSection: React.FC = () => {
                   Complaint Successfully Registered
                 </h3>
                 <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto">
-                  Your civic report has been submitted and queued for AI triage and department routing. Please save your public tracking ID:
+                  Your civic report has been submitted and queued for triage and department routing. Please save your public tracking ID:
                 </p>
               </div>
 
@@ -322,6 +354,36 @@ export const IntakeFormSection: React.FC = () => {
 
                 {/* Category & Department Selectors */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Department Select */}
+                  <div>
+                    <label className="block font-sans text-xs font-semibold tracking-wider uppercase text-[#161616] mb-1.5">
+                      Department (Optional)
+                    </label>
+                    <select
+                      value={departmentId}
+                      onChange={(e) => {
+                        setDepartmentId(e.target.value);
+                        setCategoryId(""); // Reset category when department changes
+                      }}
+                      disabled={loadingDepartments}
+                      className="w-full px-3.5 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A] disabled:opacity-60"
+                    >
+                      <option value="">
+                        {loadingDepartments
+                          ? "Loading departments..."
+                          : errorDepartments
+                          ? "Unable to load departments. Please try again."
+                          : "Select a department..."}
+                      </option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Category Select */}
                   <div>
                     <label className="block font-sans text-xs font-semibold tracking-wider uppercase text-[#161616] mb-1.5">
                       Category (Optional)
@@ -329,30 +391,19 @@ export const IntakeFormSection: React.FC = () => {
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+                      disabled={loadingCategories}
+                      className="w-full px-3.5 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A] disabled:opacity-60"
                     >
-                      <option value="">Select a category...</option>
-                      {categories.map((cat) => (
+                      <option value="">
+                        {loadingCategories
+                          ? "Loading categories..."
+                          : errorCategories
+                          ? "Unable to load categories. Please try again."
+                          : "Select a category..."}
+                      </option>
+                      {filteredCategories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
                           {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-sans text-xs font-semibold tracking-wider uppercase text-[#161616] mb-1.5">
-                      Department (Optional)
-                    </label>
-                    <select
-                      value={departmentId}
-                      onChange={(e) => setDepartmentId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
-                    >
-                      <option value="">Select a department...</option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
                         </option>
                       ))}
                     </select>
