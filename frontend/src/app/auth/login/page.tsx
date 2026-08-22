@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMeApi, loginApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
+import { Logo } from "@/components/ui/Logo";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { LockIcon } from "@/components/ui/Icons";
 
 export default function StaffLoginPage() {
   const router = useRouter();
@@ -28,7 +34,7 @@ export default function StaffLoginPage() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("An error occurred during login.");
+        setError("An error occurred during staff login. Please check credentials.");
       }
     } finally {
       setLoading(false);
@@ -36,65 +42,121 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-slate-200">
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">Staff Login</h1>
-        <p className="text-slate-600 text-sm mb-6">
-          Access restricted to municipal officers and administrators.
-        </p>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F5F1E8] text-[#161616]">
+      {/* Left Split Panel (~50% Desktop): Dark Charcoal & Architectural Overlay */}
+      <div className="lg:w-1/2 bg-[#292724] text-[#FBFAF7] relative overflow-hidden flex flex-col justify-between p-8 lg:p-16 border-b lg:border-b-0 lg:border-r border-[#161616] min-h-[320px] lg:min-h-screen">
+        {/* Background Architectural Image */}
+        <div className="absolute inset-0 z-0 opacity-25">
+          <Image
+            src="/images/dark-architecture.png"
+            alt="Dark Architecture Texture"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover object-center"
+          />
+        </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
-            {error}
+        <div className="relative z-10 space-y-6">
+          <Logo variant="darkFooter" size="lg" showTagline />
+
+          <div className="space-y-4 pt-12 max-w-md">
+            <span className="font-sans text-xs font-semibold tracking-widest uppercase text-[#B7A58A] bg-[#161616]/60 px-3 py-1 rounded-xs border border-[#5D5A55]/50 inline-block">
+              MUNICIPAL OPERATIONS
+            </span>
+
+            <h1 className="font-serif-civic text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-[#FBFAF7]">
+              City operations begin with accountability.
+            </h1>
+
+            <p className="font-sans text-sm sm:text-base text-[#D6CFC3] leading-relaxed">
+              Secure operational access for municipal department officers, triage personnel, and city administrators.
+            </p>
           </div>
-        )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-xs font-semibold uppercase text-slate-700 mb-1"
-            >
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="officer@civicpulse.gov"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-xs font-semibold uppercase text-slate-700 mb-1"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-sm transition-colors disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
+        <div className="relative z-10 pt-8 font-sans text-xs text-[#D6CFC3]/80 flex items-center justify-between border-t border-[#5D5A55]/40">
+          <Link href="/" className="hover:text-[#FBFAF7] transition-colors">
+            ← Return to Public Portal
+          </Link>
+          <span>CivicPulse Platform</span>
+        </div>
       </div>
-    </main>
+
+      {/* Right Split Panel (~50% Desktop): Warm Ivory Staff Sign-In Form */}
+      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16">
+        <Card variant="primary" padding="lg" className="w-full max-w-md border-[#D6CFC3] shadow-civic space-y-6">
+          <div className="space-y-2 border-b border-[#D6CFC3] pb-4">
+            <h2 className="font-serif-civic text-3xl font-bold text-[#161616]">
+              Staff Sign In
+            </h2>
+            <p className="font-sans text-xs text-[#5D5A55]">
+              Access complaint operations, workflow routing, and city intelligence.
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3.5 bg-[#EAE4DA] border border-[#292724] text-[#161616] text-xs font-semibold rounded-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="block font-sans text-xs font-semibold uppercase tracking-wider text-[#161616] mb-1.5"
+              >
+                Official Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="officer@civicpulse.gov"
+                className="w-full px-4 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block font-sans text-xs font-semibold uppercase tracking-wider text-[#161616] mb-1.5"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] font-sans text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="dark"
+              size="lg"
+              disabled={loading}
+              className="w-full justify-center shadow-civic"
+            >
+              {loading ? "Authenticating..." : "Sign In to Operations →"}
+            </Button>
+          </form>
+
+          <div className="pt-2 flex items-center justify-center gap-2 text-xs font-sans text-[#5D5A55] border-t border-[#D6CFC3]">
+            <LockIcon className="w-3.5 h-3.5 text-[#292724]" />
+            <span>Authorized municipal personnel only.</span>
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }

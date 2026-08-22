@@ -2,8 +2,28 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { Container } from "@/components/ui/Container";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { LockIcon, ClockIcon } from "@/components/ui/Icons";
 import { trackComplaintApi } from "@/lib/api/public";
 import type { CitizenComplaintResponse } from "@/types/complaint";
+
+type BadgeVariantType =
+  | "reported"
+  | "assigned"
+  | "in_progress"
+  | "resolved"
+  | "critical"
+  | "high"
+  | "medium"
+  | "low"
+  | "neutral";
 
 export default function TrackingPage({
   params,
@@ -11,13 +31,16 @@ export default function TrackingPage({
   params: Promise<{ trackingId: string }>;
 }) {
   const { trackingId } = use(params);
+  const router = useRouter();
 
   const [complaint, setComplaint] = useState<CitizenComplaintResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState(trackingId);
 
   useEffect(() => {
     let isMounted = true;
+
     trackComplaintApi(trackingId)
       .then((data) => {
         if (isMounted) {
@@ -30,7 +53,7 @@ export default function TrackingPage({
           if (err instanceof Error) {
             setError(err.message);
           } else {
-            setError("Failed to load complaint status.");
+            setError("We could not find a complaint matching that tracking ID. Please check the ID and try again.");
           }
         }
       })
@@ -45,180 +68,259 @@ export default function TrackingPage({
     };
   }, [trackingId]);
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "reported":
-        return "bg-blue-100 text-blue-800 border-blue-300";
-      case "assigned":
-        return "bg-purple-100 text-purple-800 border-purple-300";
-      case "in_progress":
-        return "bg-amber-100 text-amber-800 border-amber-300";
-      case "resolved":
-        return "bg-emerald-100 text-emerald-800 border-emerald-300";
-      case "closed":
-        return "bg-slate-100 text-slate-800 border-slate-300";
-      case "rejected":
-        return "bg-red-100 text-red-800 border-red-300";
-      default:
-        return "bg-slate-100 text-slate-800 border-slate-300";
-    }
+  const lifecycleStatuses = ["reported", "assigned", "in_progress", "resolved"];
+
+  const getStatusIndex = (currentStatus: string) => {
+    const s = currentStatus.toLowerCase();
+    const idx = lifecycleStatuses.indexOf(s);
+    return idx >= 0 ? idx : 0;
   };
 
-  const getPriorityBadgeClass = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case "critical":
-        return "bg-red-50 text-red-700 border-red-200";
-      case "high":
-        return "bg-orange-50 text-orange-700 border-orange-200";
-      case "medium":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "low":
-        return "bg-slate-50 text-slate-600 border-slate-200";
-      default:
-        return "bg-slate-50 text-slate-600 border-slate-200";
+  const getBadgeVariant = (val: string): BadgeVariantType => {
+    const s = val.toLowerCase();
+    if (["reported", "assigned", "in_progress", "resolved", "critical", "high", "medium", "low"].includes(s)) {
+      return s as BadgeVariantType;
     }
+    return "neutral";
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-slate-900 text-white py-6 px-6 shadow-md">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="hover:opacity-90">
-            <h1 className="text-2xl font-bold tracking-tight">CivicPulse</h1>
-            <p className="text-slate-400 text-xs mt-0.5">
-              Public Complaint Tracker
-            </p>
-          </Link>
-          <Link
-            href="/"
-            className="text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-md border border-slate-700 transition-colors"
-          >
-            ← Submit New Complaint
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-[#F5F1E8] text-[#161616]">
+      <Navbar />
 
-      <main className="max-w-3xl mx-auto p-6">
-        {loading && (
-          <div className="bg-white p-12 rounded-xl text-center text-slate-500 shadow-sm">
-            Loading complaint status...
-          </div>
-        )}
+      <main className="flex-1 py-12 sm:py-16">
+        <Container size="narrow">
+          {/* Header & Search */}
+          <SectionHeading
+            eyebrow="COMPLAINT TRACKING"
+            title="Track Your Complaint"
+            subtitle="Follow your civic complaint in real-time from submission to resolution."
+            align="center"
+          />
 
-        {error && (
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-red-200 text-center space-y-4">
-            <div className="text-red-500 text-4xl">⚠️</div>
-            <h2 className="text-xl font-bold text-slate-900">Complaint Not Found</h2>
-            <p className="text-slate-600 text-sm">{error}</p>
-            <p className="text-slate-400 text-xs font-mono">ID: {trackingId}</p>
-            <Link
-              href="/"
-              className="inline-block mt-4 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800"
+          {/* Search Bar */}
+          <Card variant="primary" padding="md" className="mb-10 shadow-civic border-[#D6CFC3]">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchInput.trim()) {
+                  router.push(`/track/${encodeURIComponent(searchInput.trim())}`);
+                }
+              }}
+              className="flex flex-col sm:flex-row gap-3"
             >
-              Back to Home
-            </Link>
-          </div>
-        )}
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Enter 25-character Tracking ID (e.g. CP-...)"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+                />
+              </div>
+              <Button variant="dark" size="md" type="submit" disabled={!searchInput.trim()}>
+                Track Complaint
+              </Button>
+            </form>
+          </Card>
 
-        {complaint && (
-          <div className="space-y-6">
-            {/* Header Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-                <div>
-                  <div className="text-xs font-mono text-slate-500 uppercase tracking-wide">
-                    Tracking ID
-                  </div>
-                  <div className="text-xl font-bold font-mono text-slate-900 select-all">
-                    {complaint.tracking_id}
-                  </div>
-                </div>
+          {/* Loading Skeleton */}
+          {loading && (
+            <Card variant="primary" padding="lg" className="text-center py-16 space-y-4 shadow-civic">
+              <div className="w-8 h-8 border-2 border-[#B7A58A] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="font-sans text-sm text-[#5D5A55]">Retrieving complaint details...</p>
+            </Card>
+          )}
 
-                <div className="flex gap-2">
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider ${getStatusBadgeClass(
-                      complaint.status
-                    )}`}
-                  >
-                    {complaint.status}
-                  </span>
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider ${getPriorityBadgeClass(
-                      complaint.priority
-                    )}`}
-                  >
-                    {complaint.priority} Priority
-                  </span>
+          {/* Error / Not Found State */}
+          {error && !loading && (
+            <Card variant="primary" padding="lg" className="text-center space-y-6 shadow-civic border-[#D6CFC3]">
+              <div className="w-12 h-12 rounded-full bg-[#EAE4DA] text-[#292724] flex items-center justify-center mx-auto text-xl font-bold">
+                !
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-serif-civic text-2xl font-bold text-[#161616]">
+                  Complaint Not Found
+                </h3>
+                <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto">
+                  We could not find a complaint matching that tracking ID. Please check the ID and try again.
+                </p>
+                <div className="bg-[#F5F1E8] p-2 rounded border border-[#D6CFC3] inline-block font-mono text-xs text-[#5D5A55]">
+                  ID: {trackingId}
                 </div>
               </div>
-
-              {/* Title / Summary */}
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {complaint.title || "Citizen Reported Complaint"}
-                </h2>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-600 mt-2">
-                  {complaint.category && (
-                    <div>
-                      <span className="font-semibold text-slate-700">Category:</span>{" "}
-                      {complaint.category}
-                    </div>
-                  )}
-                  {complaint.department && (
-                    <div>
-                      <span className="font-semibold text-slate-700">Department:</span>{" "}
-                      {complaint.department}
-                    </div>
-                  )}
+                <Link href="/">
+                  <Button variant="dark" size="md">
+                    Return Home →
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
+
+          {/* Complaint Details View */}
+          {complaint && !loading && (
+            <div className="space-y-8">
+              {/* Summary Header Card */}
+              <Card variant="primary" padding="lg" className="shadow-civic border-[#D6CFC3] space-y-6">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#D6CFC3] pb-6">
                   <div>
-                    <span className="font-semibold text-slate-700">Submitted:</span>{" "}
-                    {new Date(complaint.created_at).toLocaleString()}
+                    <span className="font-sans text-xs font-semibold tracking-wider text-[#5D5A55] uppercase">
+                      Tracking ID
+                    </span>
+                    <h2 className="font-mono text-xl sm:text-2xl font-bold text-[#161616] tracking-wide select-all mt-1">
+                      {complaint.tracking_id}
+                    </h2>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getBadgeVariant(complaint.status)}>
+                      Status: {complaint.status.replace("_", " ")}
+                    </Badge>
+                    <Badge variant={getBadgeVariant(complaint.priority)}>
+                      {complaint.priority} Priority
+                    </Badge>
                   </div>
                 </div>
+
+                {/* 2-4 Information Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-2">
+                  <div>
+                    <span className="font-sans text-xs text-[#5D5A55] uppercase tracking-wider block mb-1">
+                      Category
+                    </span>
+                    <span className="font-serif-civic font-bold text-lg text-[#161616]">
+                      {complaint.category || "General"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="font-sans text-xs text-[#5D5A55] uppercase tracking-wider block mb-1">
+                      Department
+                    </span>
+                    <span className="font-serif-civic font-bold text-lg text-[#161616]">
+                      {complaint.department || "Unassigned"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="font-sans text-xs text-[#5D5A55] uppercase tracking-wider block mb-1">
+                      Submitted On
+                    </span>
+                    <span className="font-sans text-sm font-medium text-[#161616]">
+                      {new Date(complaint.created_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="font-sans text-xs text-[#5D5A55] uppercase tracking-wider block mb-1">
+                      SLA Target
+                    </span>
+                    <span className="font-sans text-sm font-medium text-[#161616]">
+                      {complaint.sla_deadline
+                        ? new Date(complaint.sla_deadline).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "Standard"}
+                    </span>
+                  </div>
+                </div>
+
+                {complaint.location_address && (
+                  <div className="p-3 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm font-sans text-xs text-[#161616] flex items-center gap-2">
+                    <span className="font-semibold shrink-0">📍 Verified Location:</span>
+                    <span className="truncate">{complaint.location_address}</span>
+                  </div>
+                )}
+              </Card>
+
+              {/* Status Lifecycle Timeline */}
+              <Card variant="primary" padding="lg" className="shadow-civic border-[#D6CFC3] space-y-6">
+                <h3 className="font-serif-civic text-2xl font-bold text-[#161616]">
+                  Resolution Lifecycle Timeline
+                </h3>
+
+                <div className="relative pt-4 pb-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {lifecycleStatuses.map((st, idx) => {
+                      const currentIdx = getStatusIndex(complaint.status);
+                      const isCompleted = idx < currentIdx;
+                      const isCurrent = idx === currentIdx;
+
+                      return (
+                        <div
+                          key={st}
+                          className={`p-4 rounded-sm border transition-all ${
+                            isCurrent
+                              ? "bg-[#EAE4DA] border-[#292724] shadow-sm"
+                              : isCompleted
+                              ? "bg-[#FBFAF7] border-[#D6CFC3]"
+                              : "bg-[#FBFAF7]/50 border-[#D6CFC3]/50 opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                                isCurrent
+                                  ? "bg-[#292724] text-[#FBFAF7]"
+                                  : isCompleted
+                                  ? "bg-[#B7A58A] text-[#161616]"
+                                  : "bg-[#D6CFC3] text-[#5D5A55]"
+                              }`}
+                            >
+                              {idx + 1}
+                            </span>
+                            {isCurrent && <Badge variant="assigned">Current</Badge>}
+                          </div>
+                          <h4 className="font-serif-civic text-lg font-bold text-[#161616] capitalize">
+                            {st.replace("_", " ")}
+                          </h4>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Resolution Progress / SLA Panel */}
+              <Card variant="secondary" padding="md" className="border-[#D6CFC3]">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded bg-[#FBFAF7] border border-[#D6CFC3]">
+                    <ClockIcon className="w-5 h-5 text-[#292724]" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-serif-civic text-lg font-bold text-[#161616]">
+                      Resolution Progress
+                    </h4>
+                    <p className="font-sans text-xs text-[#5D5A55] leading-relaxed">
+                      Assigned to the <strong>{complaint.department || "Municipal Operations"}</strong> department.
+                      {complaint.sla_breached
+                        ? " SLA deadline extension applied due to operational complexity."
+                        : " Work is progressing within target resolution timeframe."}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Privacy Notice */}
+              <div className="p-4 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm flex items-center gap-3 text-xs text-[#5D5A55]">
+                <LockIcon className="w-4 h-4 shrink-0 text-[#292724]" />
+                <span>
+                  <strong>Privacy Assurance:</strong> Your tracking view contains only citizen-safe complaint information. Internal municipal notes, personal details, and staff assignments are never displayed here.
+                </span>
               </div>
-
-              {/* Location Address */}
-              {complaint.location_address && (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700">
-                  <span className="font-semibold">📍 Location:</span>{" "}
-                  {complaint.location_address}
-                </div>
-              )}
             </div>
-
-            {/* Timeline Section */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-              <h3 className="text-base font-bold text-slate-900">
-                Resolution Timeline
-              </h3>
-
-              {complaint.timeline.length === 0 ? (
-                <p className="text-xs text-slate-500">No status updates yet.</p>
-              ) : (
-                <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                  {complaint.timeline.map((event, idx) => (
-                    <div key={idx} className="relative">
-                      <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-white" />
-                      <div className="text-sm font-semibold text-slate-900 capitalize">
-                        {event.status.replace("_", " ")}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Privacy Assurance Box */}
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-800">
-              🔒 <strong>Privacy Assurance:</strong> Voluntary contact details and raw complaint texts are strictly confidential and are never exposed in public tracking responses.
-            </div>
-          </div>
-        )}
+          )}
+        </Container>
       </main>
+
+      <Footer />
     </div>
   );
 }

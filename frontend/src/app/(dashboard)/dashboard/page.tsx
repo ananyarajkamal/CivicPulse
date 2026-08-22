@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import AIDetailPanel from "@/components/dashboard/AIDetailPanel";
 import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import InternalCommentsPanel from "@/components/dashboard/InternalCommentsPanel";
 import KPICards from "@/components/dashboard/KPICards";
 import RelatedComplaintsPanel from "@/components/dashboard/RelatedComplaintsPanel";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { LockIcon, TrackingIcon } from "@/components/ui/Icons";
 import {
   fetchAnalyticsHotspotsApi,
   fetchAnalyticsSummaryApi,
@@ -32,6 +36,17 @@ import type {
   RelatedComplaintResponse,
   StaffComplaintDetailResponse,
 } from "@/types/staff_complaint";
+
+type BadgeVariantType =
+  | "reported"
+  | "assigned"
+  | "in_progress"
+  | "resolved"
+  | "critical"
+  | "high"
+  | "medium"
+  | "low"
+  | "neutral";
 
 export default function DashboardHome() {
   const { user, accessToken } = useAuthStore();
@@ -93,7 +108,7 @@ export default function DashboardHome() {
     try {
       const updated = await updateComplaintStatusApi(complaint.id, toStatus, undefined, accessToken);
       setComplaint(updated);
-      setActionSuccess(`Status updated to ${toStatus}`);
+      setActionSuccess(`Status successfully updated to ${toStatus.replace("_", " ")}`);
       if (accessToken) fetchKpisApi(accessToken).then(setKpis).catch(() => null);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
@@ -120,136 +135,258 @@ export default function DashboardHome() {
     setComments((prev) => [...prev, newComment]);
   };
 
+  const getBadgeVariant = (val: string): BadgeVariantType => {
+    const s = val.toLowerCase();
+    if (["reported", "assigned", "in_progress", "resolved", "critical", "high", "medium", "low"].includes(s)) {
+      return s as BadgeVariantType;
+    }
+    return "neutral";
+  };
+
+  const formattedDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Municipal Operations Dashboard
-        </h1>
-        <p className="text-slate-600 text-sm mt-1">
-          Welcome, {user?.full_name} ({user?.role?.replace("_", " ")})
-        </p>
+    <div className="space-y-10">
+      {/* Dashboard Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#D6CFC3] pb-6">
+        <div>
+          <span className="font-sans text-xs font-semibold tracking-widest text-[#5D5A55] uppercase block">
+            MUNICIPAL OPERATIONS
+          </span>
+          <h1 className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616] tracking-tight mt-1">
+            Dashboard
+          </h1>
+          <p className="font-sans text-sm text-[#5D5A55] mt-1">
+            Monitor complaints, service performance, and resolution progress across municipal departments.
+          </p>
+        </div>
+
+        <div className="text-right shrink-0">
+          <div className="font-serif-civic text-lg font-bold text-[#161616]">
+            {user?.full_name}
+          </div>
+          <div className="font-sans text-xs text-[#5D5A55]">{formattedDate}</div>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <KPICards kpis={kpis} />
-
-      {/* City Intelligence & Analytics Panel */}
-      <AnalyticsPanel summary={analyticsSummary} trends={analyticsTrends} hotspots={analyticsHotspots} />
-
-      {/* Staff ID Lookup Form */}
-      <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-        <h2 className="text-base font-bold text-slate-900">
-          Inspect Complaint & Operational Lifecycle
+      {/* KPI Cards Section */}
+      <section className="space-y-3">
+        <h2 className="font-serif-civic text-xl font-bold text-[#161616]">
+          Operational Overview
         </h2>
-        <p className="text-xs text-slate-500">
-          Enter internal Complaint UUID (e.g. <code>550e8400-e29b-41d4-a716-446655440000</code>)
-        </p>
+        <KPICards kpis={kpis} />
+      </section>
 
-        <form onSubmit={handleSearchDetail} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Complaint UUID..."
-            value={complaintIdInput}
-            onChange={(e) => setComplaintIdInput(e.target.value)}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-md text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-          />
-          <button
-            type="submit"
-            disabled={loading || !complaintIdInput.trim()}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-md transition-colors disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Inspect Detail"}
-          </button>
-        </form>
-
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md font-semibold">
-            {error}
+      {/* Complaint Inspection Workspace */}
+      <section id="queue" className="space-y-6">
+        <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-4">
+          <div className="flex items-center gap-2">
+            <TrackingIcon className="w-5 h-5 text-[#292724]" />
+            <h2 className="font-serif-civic text-2xl font-bold text-[#161616]">
+              Inspect Complaint &amp; Workflow Workspace
+            </h2>
           </div>
-        )}
-        {actionSuccess && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-md font-semibold">
-            {actionSuccess}
+          <p className="font-sans text-xs text-[#5D5A55]">
+            Enter internal Complaint UUID (e.g.{" "}
+            <code className="bg-[#EAE4DA] px-1.5 py-0.5 rounded font-mono text-xs text-[#161616]">
+              550e8400-e29b-41d4-a716-446655440000
+            </code>
+            ) or search tracking queue to load staff workspace.
+          </p>
+
+          <form onSubmit={handleSearchDetail} className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Complaint UUID..."
+              value={complaintIdInput}
+              onChange={(e) => setComplaintIdInput(e.target.value)}
+              className="flex-1 px-4 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
+            />
+            <Button
+              type="submit"
+              variant="dark"
+              size="md"
+              disabled={loading || !complaintIdInput.trim()}
+            >
+              {loading ? "Loading Workspace..." : "Inspect Workspace →"}
+            </Button>
+          </form>
+
+          {error && (
+            <div className="p-3 bg-[#EAE4DA] border border-[#292724] text-[#161616] text-xs rounded-sm font-semibold">
+              {error}
+            </div>
+          )}
+          {actionSuccess && (
+            <div className="p-3 bg-[#FBFAF7] border border-[#B7A58A] text-[#161616] text-xs rounded-sm font-semibold">
+              ✓ {actionSuccess}
+            </div>
+          )}
+        </Card>
+
+        {/* Detailed Workspace Layout (~65% Left / ~35% Right) */}
+        {complaint && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left / Main Workspace Column (~65%) */}
+            <div className="lg:col-span-8 space-y-6">
+              {/* Complaint Overview Card */}
+              <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-6">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#D6CFC3] pb-4">
+                  <div>
+                    <span className="font-mono text-xs text-[#5D5A55] block">
+                      UUID: {complaint.id}
+                    </span>
+                    <h3 className="font-serif-civic text-2xl font-bold text-[#161616] mt-1">
+                      {complaint.title || "Citizen Complaint Record"}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getBadgeVariant(complaint.status)}>
+                      {complaint.status.replace("_", " ")}
+                    </Badge>
+                    <Badge variant={getBadgeVariant(complaint.priority)}>
+                      {complaint.priority} Priority
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Submitter Raw Text & Staff-Only Contact Info */}
+                <div className="p-4 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm space-y-3 font-sans text-xs text-[#161616]">
+                  <div>
+                    <span className="font-semibold text-[#5D5A55] block uppercase tracking-wider mb-1">
+                      Raw Citizen Report Text:
+                    </span>
+                    <p className="leading-relaxed text-sm bg-[#FBFAF7] p-3 rounded border border-[#D6CFC3]">
+                      &quot;{complaint.raw_text}&quot;
+                    </p>
+                  </div>
+
+                  {(complaint.submitter_name || complaint.submitter_contact) && (
+                    <div className="pt-2 border-t border-[#D6CFC3] space-y-1">
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-[#5D5A55] uppercase tracking-wider">
+                        <LockIcon className="w-3.5 h-3.5 text-[#292724]" />
+                        <span>Confidential Submitter Info (Staff Only)</span>
+                      </div>
+                      {complaint.submitter_name && (
+                        <p>Name: <strong>{complaint.submitter_name}</strong></p>
+                      )}
+                      {complaint.submitter_contact && (
+                        <p>Contact: <strong>{complaint.submitter_contact}</strong></p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Resolution Workflow & Status Transition Controls */}
+                <div className="pt-4 border-t border-[#D6CFC3] space-y-4">
+                  <h4 className="font-serif-civic text-lg font-bold text-[#161616]">
+                    Resolution Workflow Controls
+                  </h4>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-sans text-xs font-semibold text-[#5D5A55] uppercase tracking-wider mr-2">
+                      Update Status:
+                    </span>
+                    {["ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((st) => (
+                      <Button
+                        key={st}
+                        variant={complaint.status === st ? "dark" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(st)}
+                        disabled={complaint.status === st}
+                        className="text-xs"
+                      >
+                        Set {st.replace("_", " ")}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Officer Assignment Form */}
+                  <form onSubmit={handleAssignOfficer} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+                    <span className="font-sans text-xs font-semibold text-[#5D5A55] uppercase tracking-wider shrink-0">
+                      Officer Assignment:
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Officer User UUID..."
+                      value={officerIdInput}
+                      onChange={(e) => setOfficerIdInput(e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm font-mono text-xs text-[#161616]"
+                    />
+                    <Button
+                      type="submit"
+                      variant="dark"
+                      size="sm"
+                      disabled={!officerIdInput.trim()}
+                    >
+                      Assign Officer
+                    </Button>
+                  </form>
+                </div>
+              </Card>
+
+              {/* Internal Comments Panel */}
+              <InternalCommentsPanel comments={comments} onAddComment={handleAddComment} />
+            </div>
+
+            {/* Right Sidebar Column (~35%) */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Priority & SLA Summary Card */}
+              <Card variant="secondary" padding="md" className="border-[#D6CFC3] space-y-3">
+                <h4 className="font-serif-civic text-lg font-bold text-[#161616]">
+                  Priority &amp; SLA Status
+                </h4>
+                <div className="space-y-2 font-sans text-xs">
+                  <div className="flex justify-between items-center py-1 border-b border-[#D6CFC3]/60">
+                    <span className="text-[#5D5A55]">Priority Tier</span>
+                    <Badge variant={getBadgeVariant(complaint.priority)}>
+                      {complaint.priority}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#D6CFC3]/60">
+                    <span className="text-[#5D5A55]">Priority Score</span>
+                    <span className="font-serif-civic font-bold text-base text-[#161616]">
+                      {complaint.priority_score ?? "N/A"} / 100
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-[#D6CFC3]/60">
+                    <span className="text-[#5D5A55]">SLA Deadline</span>
+                    <span className="font-medium text-[#161616]">
+                      {complaint.sla_deadline
+                        ? new Date(complaint.sla_deadline).toLocaleDateString()
+                        : "Standard"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-[#5D5A55]">SLA Breach State</span>
+                    {complaint.sla_breached ? (
+                      <Badge variant="critical">Breached</Badge>
+                    ) : (
+                      <Badge variant="resolved">On Track</Badge>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* AI Detail Intelligence Panel */}
+              <AIDetailPanel complaint={complaint} />
+
+              {/* Related Complaints Cluster Panel */}
+              <RelatedComplaintsPanel relatedComplaints={relatedComplaints} />
+            </div>
           </div>
         )}
       </section>
 
-      {/* Complaint Detail & Workflow Actions */}
-      {complaint && (
-        <section className="space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-xs font-mono text-slate-400">UUID: {complaint.id}</span>
-                <h2 className="text-xl font-bold text-slate-900 mt-1">
-                  {complaint.title || "Complaint Record"}
-                </h2>
-              </div>
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full uppercase">
-                {complaint.status}
-              </span>
-            </div>
-
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs text-slate-800 space-y-1">
-              <div>
-                <span className="font-semibold text-slate-700">Raw Text:</span> {complaint.raw_text}
-              </div>
-              {complaint.submitter_name && (
-                <div>
-                  <span className="font-semibold text-slate-700">Submitter Name (Staff Only):</span>{" "}
-                  {complaint.submitter_name}
-                </div>
-              )}
-              {complaint.submitter_contact && (
-                <div>
-                  <span className="font-semibold text-slate-700">Submitter Contact (Staff Only):</span>{" "}
-                  {complaint.submitter_contact}
-                </div>
-              )}
-            </div>
-
-            {/* Workflow Action Controls */}
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-xs font-bold text-slate-700">Update Status:</span>
-                {["ASSIGNED", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => handleStatusUpdate(st)}
-                    disabled={complaint.status === st}
-                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded border border-slate-300 disabled:opacity-40"
-                  >
-                    Set {st}
-                  </button>
-                ))}
-              </div>
-
-              <form onSubmit={handleAssignOfficer} className="flex gap-2 items-center">
-                <span className="text-xs font-bold text-slate-700">Assign Officer:</span>
-                <input
-                  type="text"
-                  placeholder="Officer User UUID..."
-                  value={officerIdInput}
-                  onChange={(e) => setOfficerIdInput(e.target.value)}
-                  className="px-3 py-1 text-xs border border-slate-300 rounded font-mono text-slate-900 w-64"
-                />
-                <button
-                  type="submit"
-                  disabled={!officerIdInput.trim()}
-                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded disabled:opacity-50"
-                >
-                  Assign
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <AIDetailPanel complaint={complaint} />
-          <RelatedComplaintsPanel relatedComplaints={relatedComplaints} />
-          <InternalCommentsPanel comments={comments} onAddComment={handleAddComment} />
-        </section>
-      )}
+      {/* City Operational Intelligence Section */}
+      <section id="intelligence" className="pt-4">
+        <AnalyticsPanel summary={analyticsSummary} trends={analyticsTrends} hotspots={analyticsHotspots} />
+      </section>
     </div>
   );
 }

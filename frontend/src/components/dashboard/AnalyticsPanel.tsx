@@ -1,6 +1,14 @@
 "use client";
 
-import type { AnalyticsSummaryResponse, HotspotClusterItem, TrendDataPoint } from "@/types/analytics";
+import React from "react";
+import type {
+  AnalyticsSummaryResponse,
+  HotspotClusterItem,
+  TrendDataPoint,
+} from "@/types/analytics";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { AnalyticsIcon, HotspotIcon, CityIcon } from "@/components/ui/Icons";
 
 export default function AnalyticsPanel({
   summary,
@@ -13,120 +21,127 @@ export default function AnalyticsPanel({
 }) {
   if (!summary) return null;
 
+  const totalClosed = summary.statuses.find((s) => s.status.toLowerCase() === "resolved")?.count || 0;
+  const totalOpen = summary.total_complaints - totalClosed;
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div>
-          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            📊 City Intelligence & Analytics Breakdown
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Operational metrics, department performance, and SLA compliance analytics
-          </p>
+    <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-6">
+      <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-[#EAE4DA] text-[#292724]">
+            <AnalyticsIcon className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
+              City Operational Intelligence
+            </h3>
+            <p className="font-sans text-xs text-[#5D5A55]">
+              Real-time complaint metrics, SLA compliance, and geographical hotspot clusters
+            </p>
+          </div>
         </div>
-        <div className="text-xs font-semibold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-300">
-          SLA Compliance: {summary.sla_compliance_rate}%
+
+        <Badge variant="neutral">System Snapshot ({trends.length} trend days)</Badge>
+      </div>
+
+      {/* Summary KPI Highlights */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-3.5 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm space-y-1">
+          <span className="font-sans text-[11px] font-semibold text-[#5D5A55] uppercase">
+            Total Complaints
+          </span>
+          <div className="font-serif-civic text-2xl font-bold text-[#161616]">
+            {summary.total_complaints}
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm space-y-1">
+          <span className="font-sans text-[11px] font-semibold text-[#5D5A55] uppercase">
+            SLA Compliance Rate
+          </span>
+          <div className="font-serif-civic text-2xl font-bold text-[#161616]">
+            {Math.round(summary.sla_compliance_rate * 100)}%
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm space-y-1">
+          <span className="font-sans text-[11px] font-semibold text-[#5D5A55] uppercase">
+            Active Open Cases
+          </span>
+          <div className="font-serif-civic text-2xl font-bold text-[#161616]">
+            {totalOpen}
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm space-y-1">
+          <span className="font-sans text-[11px] font-semibold text-[#5D5A55] uppercase">
+            Active Hotspots
+          </span>
+          <div className="font-serif-civic text-2xl font-bold text-[#161616]">
+            {hotspots.length}
+          </div>
         </div>
       </div>
 
-      {/* Grid Breakdowns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Trend Volume */}
-        {trends.length > 0 && (
-          <div className="md:col-span-2 bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
-            <h4 className="text-xs font-bold uppercase text-slate-600">
-              30-Day Complaint Volume Trend ({trends.length} active dates)
-            </h4>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {trends.slice(-10).map((t) => (
-                <span key={t.date} className="px-2.5 py-1 bg-white border border-slate-200 rounded font-mono text-slate-800">
-                  {t.date}: <strong className="text-blue-700">{t.count}</strong>
-                </span>
-              ))}
-            </div>
+      {/* Hotspots & Category Distribution */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+        {/* Hotspots List */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 font-sans text-xs font-semibold uppercase tracking-wider text-[#161616]">
+            <HotspotIcon className="w-4 h-4 text-[#292724]" />
+            <span>Geographic Hotspots ({hotspots.length})</span>
           </div>
-        )}
 
-        {/* Category Breakdown */}
-        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
-          <h4 className="text-xs font-bold uppercase text-slate-600">
-            Complaints by Category ({summary.categories.length})
-          </h4>
-          {summary.categories.length > 0 ? (
-            <div className="space-y-2">
-              {summary.categories.map((cat) => (
-                <div key={cat.category_name} className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-slate-800">{cat.category_name}</span>
-                  <span className="font-mono font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-900">
-                    {cat.count}
-                  </span>
+          {hotspots.length > 0 ? (
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {hotspots.map((hs) => (
+                <div
+                  key={hs.id}
+                  className="p-3 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm flex items-center justify-between text-xs"
+                >
+                  <div className="space-y-0.5">
+                    <div className="font-serif-civic font-bold text-[#161616]">
+                      {hs.primary_category || "General"} ({hs.complaint_count} issues)
+                    </div>
+                    <div className="font-sans text-[#5D5A55] text-[11px]">
+                      {hs.location_name || `GPS: (${hs.latitude.toFixed(3)}, ${hs.longitude.toFixed(3)})`}
+                    </div>
+                  </div>
+                  <Badge variant="critical">Hotspot</Badge>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400 italic">No category data recorded.</p>
+            <p className="font-sans text-xs text-[#5D5A55] italic">No active hotspots detected.</p>
           )}
         </div>
 
-        {/* Priority & Status Distribution */}
-        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
-          <div>
-            <h4 className="text-xs font-bold uppercase text-slate-600 mb-2">
-              Priority Distribution
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {summary.priorities.map((p) => (
-                <span
-                  key={p.priority}
-                  className="text-xs font-semibold px-2.5 py-1 bg-white border border-slate-300 rounded shadow-xs text-slate-900"
-                >
-                  <span className="uppercase text-slate-500 mr-1">{p.priority}:</span>
-                  <span className="font-mono font-bold">{p.count}</span>
-                </span>
-              ))}
-            </div>
+        {/* Category Breakdown */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-1.5 font-sans text-xs font-semibold uppercase tracking-wider text-[#161616]">
+            <CityIcon className="w-4 h-4 text-[#292724]" />
+            <span>Category Volume Breakdown</span>
           </div>
 
-          <div className="pt-2 border-t border-slate-200">
-            <h4 className="text-xs font-bold uppercase text-slate-600 mb-2">
-              Status Distribution
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {summary.statuses.map((st) => (
-                <span
-                  key={st.status}
-                  className="text-xs font-semibold px-2.5 py-1 bg-white border border-slate-300 rounded shadow-xs text-slate-900"
+          {summary.categories && summary.categories.length > 0 ? (
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {summary.categories.map((cat) => (
+                <div
+                  key={cat.category_name}
+                  className="p-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm flex items-center justify-between text-xs"
                 >
-                  <span className="uppercase text-slate-500 mr-1">{st.status}:</span>
-                  <span className="font-mono font-bold">{st.count}</span>
-                </span>
+                  <span className="font-sans font-medium text-[#161616] truncate max-w-[200px]">
+                    {cat.category_name}
+                  </span>
+                  <span className="font-serif-civic font-bold text-[#161616]">{cat.count}</span>
+                </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <p className="font-sans text-xs text-[#5D5A55] italic">No category data available.</p>
+          )}
         </div>
       </div>
-
-      {/* Hotspots Section */}
-      {hotspots.length > 0 && (
-        <div className="pt-4 border-t border-slate-100 space-y-3">
-          <h4 className="text-xs font-bold uppercase text-slate-600 flex items-center gap-1.5">
-            📍 Geographic Hotspot Concentration ({hotspots.length})
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {hotspots.slice(0, 6).map((h) => (
-              <div key={h.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                <div className="font-bold text-slate-900 truncate">{h.location_name}</div>
-                <div className="text-[11px] font-mono text-slate-500 mt-0.5">
-                  Lat: {h.latitude.toFixed(4)}, Lng: {h.longitude.toFixed(4)}
-                </div>
-                <div className="text-xs font-semibold text-blue-700 mt-1">
-                  {h.complaint_count} Complaints Clustered
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }
