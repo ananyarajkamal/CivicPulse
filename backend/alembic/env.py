@@ -47,7 +47,9 @@ if not database_url:
 
 if database_url:
     import re
-    m_pwd = re.match(r"^(postgresql(?:\+asyncpg)?://[^:]+:)(\[[^\]]+\])(@.+)$", database_url)
+    m_pwd = re.match(
+        r"^(postgresql(?:\+asyncpg)?://[^:]+:)(\[[^\]]+\])(@.+)$", database_url
+    )
     if m_pwd:
         database_url = m_pwd.group(1) + m_pwd.group(2)[1:-1] + m_pwd.group(3)
 
@@ -60,8 +62,8 @@ if database_url:
 # -----------------------------------------------------------------------
 # Target metadata for --autogenerate
 # -----------------------------------------------------------------------
+from app import models  # noqa: E402, F401
 from app.database import Base  # noqa: E402
-from app import models  # noqa: F401
 
 target_metadata = Base.metadata
 

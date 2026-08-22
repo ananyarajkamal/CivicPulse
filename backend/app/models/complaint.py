@@ -63,13 +63,23 @@ class Complaint(Base):
         index=True,
     )
     priority: Mapped[ComplaintPriority] = mapped_column(
-        SQLEnum(ComplaintPriority, name="priority_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
+        SQLEnum(
+            ComplaintPriority,
+            name="priority_enum",
+            values_callable=lambda x: [e.value for e in x],
+            create_type=False,
+        ),
         nullable=False,
         default=ComplaintPriority.MEDIUM,
         index=True,
     )
     status: Mapped[ComplaintStatus] = mapped_column(
-        SQLEnum(ComplaintStatus, name="status_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
+        SQLEnum(
+            ComplaintStatus,
+            name="status_enum",
+            values_callable=lambda x: [e.value for e in x],
+            create_type=False,
+        ),
         nullable=False,
         default=ComplaintStatus.REPORTED,
         index=True,

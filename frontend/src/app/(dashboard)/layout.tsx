@@ -43,10 +43,18 @@ export default function DashboardLayout({
 
   const sidebarLinks = [
     { name: "Overview", href: "/dashboard" },
-    { name: "Complaints Queue", href: "/dashboard#queue" },
-    { name: "City Intelligence", href: "/dashboard#intelligence" },
+    { name: "Complaints Queue", href: "/dashboard/complaints" },
+    { name: "City Intelligence", href: "/dashboard/intelligence" },
     { name: "Public Portal", href: "/" },
   ];
+
+  const checkIsActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+    if (href === "/") return false;
+    return pathname.startsWith(href);
+  };
 
   return (
     <div className="min-h-screen flex bg-[#F5F1E8] text-[#161616]">
@@ -63,7 +71,7 @@ export default function DashboardLayout({
             </span>
             <nav className="space-y-1">
               {sidebarLinks.map((item) => {
-                const isActive = pathname === item.href || (item.href !== "/dashboard" && item.href !== "/" && pathname.startsWith(item.href));
+                const isActive = checkIsActive(item.href);
                 return (
                   <Link
                     key={item.name}
@@ -124,16 +132,23 @@ export default function DashboardLayout({
         {mobileDrawerOpen && (
           <div className="lg:hidden bg-[#292724] text-[#FBFAF7] p-6 space-y-6 border-b border-[#161616]">
             <nav className="space-y-2">
-              {sidebarLinks.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="block px-3 py-2 text-sm text-[#D6CFC3] hover:text-[#FBFAF7] border-b border-[#5D5A55]/30 last:border-none"
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {sidebarLinks.map((item) => {
+                const isActive = checkIsActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className={`block px-3 py-2 text-sm rounded-sm ${
+                      isActive
+                        ? "bg-[#B7A58A]/20 text-[#FBFAF7] font-semibold"
+                        : "text-[#D6CFC3] hover:text-[#FBFAF7]"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
             </nav>
             {user && (
               <div className="pt-4 border-t border-[#5D5A55]/40 flex items-center justify-between">

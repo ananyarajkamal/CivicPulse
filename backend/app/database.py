@@ -8,6 +8,7 @@ Database URL is loaded dynamically from Settings (DATABASE_URL).
 Uses asyncpg driver for Supabase PostgreSQL.
 """
 
+import re
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -27,7 +28,6 @@ class Base(DeclarativeBase):
     pass
 
 
-import re
 
 _settings = get_settings()
 _db_url = _settings.DATABASE_URL

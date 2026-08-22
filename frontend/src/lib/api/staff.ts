@@ -3,6 +3,40 @@ import type { StaffComplaintDetailResponse } from "@/types/staff_complaint";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 
+export interface StaffQueueFilters {
+  status?: string;
+  priority?: string;
+  department_id?: string;
+  sla_breached?: boolean;
+}
+
+export async function fetchStaffComplaintsQueueApi(
+  filters: StaffQueueFilters = {},
+  accessToken: string
+): Promise<StaffComplaintDetailResponse[]> {
+  const params = new URLSearchParams();
+  if (filters.status) params.append("status", filters.status);
+  if (filters.priority) params.append("priority", filters.priority);
+  if (filters.department_id) params.append("department_id", filters.department_id);
+  if (filters.sla_breached !== undefined) params.append("sla_breached", String(filters.sla_breached));
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/complaints${queryString ? `?${queryString}` : ""}`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Failed to fetch complaints queue" }));
+    throw new Error(errorData.detail || "Failed to fetch complaints queue");
+  }
+
+  return res.json();
+}
+
 export async function fetchStaffComplaintDetailApi(
   complaintId: string,
   accessToken: string
