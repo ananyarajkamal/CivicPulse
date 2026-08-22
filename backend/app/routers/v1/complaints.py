@@ -467,14 +467,17 @@ async def get_staff_complaint_detail(
             detail="Access denied to complaints outside assigned department.",
         )
 
+    def _dt_key(dt_obj: datetime) -> datetime:
+        return dt_obj.replace(tzinfo=UTC) if dt_obj.tzinfo is None else dt_obj
+
     timeline = [
         TimelineEntry(status=h.to_status, timestamp=h.created_at)
-        for h in sorted(complaint.status_history, key=lambda x: x.created_at)
+        for h in sorted(complaint.status_history, key=lambda x: _dt_key(x.created_at))
     ]
 
     ai_logs = [
         AILogEntry.model_validate(log)
-        for log in sorted(complaint.ai_logs, key=lambda x: x.created_at)
+        for log in sorted(complaint.ai_logs, key=lambda x: _dt_key(x.created_at))
     ]
 
     lat = float(complaint.location_lat) if complaint.location_lat is not None else None
