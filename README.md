@@ -198,6 +198,21 @@ npm run dev
 ```
 The frontend application will be available at `http://localhost:3000`.
 
+### 3. Demo Staff Credentials
+
+The database comes pre-seeded with sample municipal accounts for testing staff operations:
+
+| Role | Department | Email | Password |
+|---|---|---|---|
+| **City Admin** | System Admin | `admin@civicpulse.gov` | `AdminPassword123!` |
+| **Municipal Officer** | Roads & Infrastructure | `officer.roads@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Water Supply & Sanitation | `officer.water@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Solid Waste Management | `officer.sanitation@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Electrical & Lighting | `officer.electricity@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Parks & Environment | `officer.parks@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Traffic & Signals | `officer.traffic@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Health & Public Safety | `officer.health@civicpulse.gov` | `OfficerPassword123!` |
+
 ---
 
 ## Testing & Quality Verification
