@@ -1,0 +1,32 @@
+# ==============================================================
+# CivicPulse Backend — Production Dependencies
+# ==============================================================
+
+# Web framework
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.29.0,<1.0.0
+
+# Validation & settings
+pydantic[email]>=2.7.0,<3.0.0
+pydantic-settings>=2.2.0,<3.0.0
+
+# Database (Supabase PostgreSQL — asyncpg driver)
+sqlalchemy[asyncio]>=2.0.29,<3.0.0
+asyncpg>=0.29.0,<1.0.0
+alembic>=1.13.0,<2.0.0
+
+# Authentication (Phase 2 — pre-installed as foundation)
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+
+# HTTP client (geocoding, AI calls)
+httpx>=0.27.0,<1.0.0
+
+# Structured logging
+structlog>=24.1.0,<25.0.0
+
+# Rate limiting
+slowapi>=0.1.9,<1.0.0
+
+# Form/multipart (needed for future file handling)
+python-multipart>=0.0.9,<1.0.0

@@ -1,0 +1,1 @@
+"""CivicPulse backend application package."""

@@ -1,0 +1,2 @@
+# This directory holds Alembic database migration files.
+# Phase 2 will add the first migration: initial schema with all 9 tables.

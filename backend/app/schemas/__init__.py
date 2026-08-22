@@ -1,0 +1,1 @@
+"""CivicPulse Pydantic schemas package."""
