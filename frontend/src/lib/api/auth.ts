@@ -21,13 +21,14 @@ async function fetchWithTimeout(
     });
     return response;
   } catch (err: unknown) {
+    console.error("[CivicPulse API Network Error]", { url, err });
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("Sign in is taking longer than expected. Please try again.");
+      throw new Error("Connection timed out. The backend service may be waking up from sleep. Please try again in a moment.");
     }
     if (err instanceof Error && err.message.includes("Invalid email")) {
       throw err;
     }
-    throw new Error("Unable to reach CivicPulse services. Please try again.");
+    throw new Error("Unable to reach CivicPulse services. Please check network connection or verify API URL.");
   } finally {
     clearTimeout(id);
   }
@@ -51,8 +52,11 @@ export async function loginApi(payload: LoginRequest): Promise<TokenResponse> {
     if (res.status === 401 || res.status === 422) {
       throw new Error("Invalid email or password.");
     }
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error(`Backend server is currently starting up (HTTP ${res.status}). Please wait 20 seconds and try again.`);
+    }
     const errorData = await res.json().catch(() => ({ detail: null }));
-    throw new Error(errorData.detail || "Unable to reach CivicPulse services. Please try again.");
+    throw new Error(errorData.detail || `Server returned error (${res.status}). Please try again.`);
   }
 
   return res.json();

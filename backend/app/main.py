@@ -97,21 +97,22 @@ def create_app() -> FastAPI:
     # Middleware (added in reverse execution order — last added = outermost)
     # -----------------------------------------------------------------------
 
-    # Innermost: CORS — handles OPTIONS preflight requests first
+    # Innermost: Request logging
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # Middle: Security headers
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # Outermost: CORS — handles all OPTIONS preflight requests immediately
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
+        allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
     )
-
-    # Middle: Request logging — logs after CORS processes the request
-    app.add_middleware(RequestLoggingMiddleware)
-
-    # Outermost: Security headers — applied last, so headers are on ALL responses
-    app.add_middleware(SecurityHeadersMiddleware)
 
     # -----------------------------------------------------------------------
     # Error handlers
