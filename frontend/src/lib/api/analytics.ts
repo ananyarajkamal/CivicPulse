@@ -5,10 +5,7 @@ import type {
 } from "@/types/analytics";
 import { useAuthStore } from "@/store/authStore";
 
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (typeof window !== "undefined" ? "/api/proxy" : "https://civicpulse-api-i6ne.onrender.com/api/v1")
-).replace(/\/+$/, "");
+const API_BASE_URL = "/api/proxy";
 
 const DEFAULT_TIMEOUT_MS = 12000;
 
