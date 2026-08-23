@@ -36,9 +36,9 @@ class Settings(BaseSettings):
 
     # --- Database (Supabase PostgreSQL) ---
     DATABASE_URL: str
-    SUPABASE_URL: str
-    SUPABASE_SERVICE_ROLE_KEY: str  # Backend only — never expose to frontend
-    SUPABASE_ANON_KEY: str
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""  # Backend only — never expose to frontend
+    SUPABASE_ANON_KEY: str = ""
 
     # --- Authentication ---
     JWT_SECRET_KEY: str
