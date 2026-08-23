@@ -159,10 +159,15 @@ class TestStatusWorkflow:
         comp1 = seed_data["comp1"]
         token = seed_data["officer1_token"]
 
-        # First resolve
+        # First transition to ASSIGNED then RESOLVED with notes
         await client.patch(
             f"/api/v1/complaints/{comp1.id}/status",
-            json={"to_status": "resolved"},
+            json={"to_status": "assigned"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "resolved", "notes": "Completed road repair work."},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -173,6 +178,28 @@ class TestStatusWorkflow:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert res.status_code == 400
+
+    async def test_resolving_without_notes_rejected(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Transition to ASSIGNED first
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "assigned"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Attempt RESOLVED without required notes
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "resolved"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 400
+        assert "note" in res.json()["detail"].lower()
 
     async def test_cross_department_status_update_forbidden(
         self, client: AsyncClient, seed_data: dict

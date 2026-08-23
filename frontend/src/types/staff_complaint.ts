@@ -13,6 +13,7 @@ export interface AILogEntry {
 export interface StaffComplaintDetailResponse {
   id: string;
   tracking_id: string;
+  source?: string;
   title?: string | null;
   raw_text: string;
   submitter_name?: string | null;

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { SimpleLineChart } from "@/components/ui/Chart";
 import { AnalyticsIcon, HotspotIcon, CityIcon, ClockIcon } from "@/components/ui/Icons";
+import { HotspotMap } from "@/components/dashboard/HotspotMap";
 
 interface FullCityIntelligenceViewProps {
   summary: AnalyticsSummaryResponse | null;
@@ -25,23 +26,36 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
   if (!summary) {
     return (
       <Card variant="primary" padding="lg" className="text-center py-12 shadow-civic border-[#D6CFC3]">
-        <p className="font-sans text-sm text-[#5D5A55]">Loading City Intelligence data...</p>
+        <p className="font-sans text-sm text-[#5D5A55]">Unable to display operational intelligence data.</p>
       </Card>
     );
   }
 
-  // Derive insights deterministically
-  const topCategory = summary.categories && summary.categories.length > 0 ? summary.categories[0].category_name : "General";
+  const formatSlaRate = (val: number): number => {
+    const rate = val <= 1.0 && val > 0 ? val * 100 : val;
+    return Math.min(100, Math.max(0, Math.round(rate)));
+  };
+
+  const formatPlural = (count: number, singular: string, plural: string): string => {
+    return `${count} ${count === 1 ? singular : plural}`;
+  };
+
+  const topCategory = summary.categories && summary.categories.length > 0 ? summary.categories[0].category_name : "Uncategorized";
   const topCategoryCount = summary.categories && summary.categories.length > 0 ? summary.categories[0].count : 0;
-  const slaPercentage = Math.round(summary.sla_compliance_rate * 100);
+  const slaPercentage = formatSlaRate(summary.sla_compliance_rate);
   const totalCategoryComplaints = summary.categories.reduce((acc, cat) => acc + cat.count, 0);
+
+  const recurringHotspots = hotspots.filter((h) => h.complaint_count >= 2);
+  const activeCasesCount = summary.statuses
+    .filter((s) => !["resolved", "closed", "rejected"].includes(s.status.toLowerCase()))
+    .reduce((acc, s) => acc + s.count, 0);
 
   return (
     <div className="space-y-10">
       {/* Header */}
       <div className="border-b border-[#D6CFC3] pb-6 space-y-2">
         <span className="font-sans text-xs font-semibold tracking-widest uppercase text-[#5D5A55]">
-          CITY INTELLIGENCE
+          CITY OPERATIONAL INTELLIGENCE
         </span>
         <h1 className="font-serif-civic text-3xl sm:text-4xl lg:text-5xl font-bold text-[#161616] tracking-tight">
           Understand the City Behind the Complaints.
@@ -51,7 +65,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
         </p>
       </div>
 
-      {/* Top Intelligence Summary Cards */}
+      {/* Top Intelligence KPI Summary Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-1">
           <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#5D5A55]">
@@ -59,6 +73,15 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
           </span>
           <div className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616]">
             {summary.total_complaints}
+          </div>
+        </Card>
+
+        <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-1">
+          <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#5D5A55]">
+            Active Cases
+          </span>
+          <div className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616]">
+            {activeCasesCount}
           </div>
         </Card>
 
@@ -73,22 +96,38 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
 
         <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-1">
           <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#5D5A55]">
-            Active Hotspots
+            Recurring Hotspots
           </span>
           <div className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616]">
-            {hotspots.length}
-          </div>
-        </Card>
-
-        <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-1">
-          <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#5D5A55]">
-            Top Category
-          </span>
-          <div className="font-serif-civic text-2xl sm:text-3xl font-bold text-[#161616] truncate">
-            {topCategory}
+            {recurringHotspots.length}
           </div>
         </Card>
       </div>
+
+      {/* Geographic Complaint Hotspots Map Section */}
+      <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-4">
+        <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
+          <div className="flex items-center gap-2">
+            <HotspotIcon className="w-5 h-5 text-[#292724]" />
+            <div>
+              <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
+                Geographic Complaint Hotspots
+              </h3>
+              <p className="font-sans text-xs text-[#5D5A55]">
+                Spatial distribution and recurring complaint concentrations across Patna
+              </p>
+            </div>
+          </div>
+          <Badge variant={recurringHotspots.length > 0 ? "critical" : "neutral"}>
+            {recurringHotspots.length > 0
+              ? `${recurringHotspots.length} Active Hotspot Clusters`
+              : "No Active Clusters"}
+          </Badge>
+        </div>
+
+        {/* Interactive Leaflet Map */}
+        <HotspotMap hotspots={hotspots} />
+      </Card>
 
       {/* Complaint Volume Trend */}
       <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-4">
@@ -104,7 +143,9 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
               </p>
             </div>
           </div>
-          <Badge variant="neutral">30-Day Timeline</Badge>
+          <Badge variant="neutral">
+            {trends.length === 1 ? "Last 1 Day Timeline" : `Last ${trends.length} Days Timeline`}
+          </Badge>
         </div>
 
         <SimpleLineChart data={trends} height={260} />
@@ -112,7 +153,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
 
       {/* Category & SLA Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Category Distribution (Horizontal Neutral Bars) */}
+        {/* Category Distribution */}
         <Card variant="primary" padding="lg" className="lg:col-span-7 border-[#D6CFC3] shadow-civic space-y-4">
           <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
             <CityIcon className="w-5 h-5 text-[#292724]" />
@@ -182,7 +223,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
           <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
             <HotspotIcon className="w-5 h-5 text-[#292724]" />
             <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
-              Active Hotspot Intelligence
+              Geographic Activity &amp; Hotspots ({formatPlural(hotspots.length, "location", "locations")})
             </h3>
           </div>
 
@@ -195,20 +236,25 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
                 >
                   <div className="space-y-1">
                     <h4 className="font-serif-civic text-base font-bold text-[#161616]">
-                      {hs.primary_category || "General Issue"} Cluster
+                      {hs.primary_category || "Uncategorized"}{" "}
+                      {hs.complaint_count >= 2 ? "Cluster" : "Reported Location"}
                     </h4>
                     <p className="font-sans text-[#5D5A55]">
                       Location: {hs.location_name || `Coordinates (${hs.latitude.toFixed(3)}, ${hs.longitude.toFixed(3)})`}
                     </p>
                   </div>
                   <div className="text-right space-y-1">
-                    <Badge variant="critical">{hs.complaint_count} Complaints</Badge>
+                    <Badge variant={hs.complaint_count >= 2 ? "critical" : "neutral"}>
+                      {formatPlural(hs.complaint_count, "Complaint", "Complaints")}
+                    </Badge>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="font-sans text-xs text-[#5D5A55] italic py-4">No active geographic hotspots detected.</p>
+            <p className="font-sans text-xs text-[#5D5A55] italic py-4">
+              No recurring geographic hotspots detected yet.
+            </p>
           )}
         </Card>
 
@@ -225,15 +271,15 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
             <div className="p-3 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm space-y-1">
               <span className="font-semibold text-[#161616] block">Category Concentration</span>
               <p className="text-[#5D5A55]">
-                &quot;{topCategory}&quot; represents the highest volume category with {topCategoryCount} reported issues.
+                &quot;{topCategory}&quot; represents the highest volume category with {formatPlural(topCategoryCount, "reported issue", "reported issues")}.
               </p>
             </div>
 
             <div className="p-3 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm space-y-1">
               <span className="font-semibold text-[#161616] block">Spatial Clustering</span>
               <p className="text-[#5D5A55]">
-                {hotspots.length > 0
-                  ? `${hotspots.length} active geographic hotspot clusters are currently detected.`
+                {recurringHotspots.length > 0
+                  ? `${formatPlural(recurringHotspots.length, "active geographic hotspot cluster is", "active geographic hotspot clusters are")} currently detected.`
                   : "No high-density complaint clusters detected in current timeframe."}
               </p>
             </div>

@@ -43,27 +43,77 @@ export default function DashboardOverviewPage() {
   const [analyticsTrends, setAnalyticsTrends] = useState<TrendDataPoint[]>([]);
   const [analyticsHotspots, setAnalyticsHotspots] = useState<HotspotClusterItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (accessToken) {
-      Promise.all([
-        fetchKpisApi(accessToken).catch(() => null),
-        fetchStaffComplaintsQueueApi({}, accessToken).catch(() => []),
-        fetchAnalyticsSummaryApi(accessToken).catch(() => null),
-        fetchAnalyticsTrendsApi(30, accessToken).catch(() => []),
-        fetchAnalyticsHotspotsApi(accessToken).catch(() => []),
-      ])
-        .then(([kpiRes, queueRes, summaryRes, trendsRes, hotspotsRes]) => {
+  const loadDashboardData = () => {
+    if (!accessToken) return;
+
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      fetchKpisApi(accessToken).catch(() => null),
+      fetchStaffComplaintsQueueApi({}, accessToken).catch(() => []),
+      fetchAnalyticsSummaryApi(accessToken).catch(() => null),
+      fetchAnalyticsTrendsApi(30, accessToken).catch(() => []),
+      fetchAnalyticsHotspotsApi(accessToken).catch(() => []),
+    ])
+      .then(([kpiRes, queueRes, summaryRes, trendsRes, hotspotsRes]) => {
+        if (!kpiRes && queueRes.length === 0 && !summaryRes) {
+          setError("Unable to connect to CivicPulse services. Please check network connection.");
+        } else {
+          setError(null);
           setKpis(kpiRes);
           setRecentComplaints(queueRes.slice(0, 5));
           setAnalyticsSummary(summaryRes);
           setAnalyticsTrends(trendsRes);
           setAnalyticsHotspots(hotspotsRes);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Unable to connect to CivicPulse services. Please try again.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    Promise.all([
+      fetchKpisApi(accessToken).catch(() => null),
+      fetchStaffComplaintsQueueApi({}, accessToken).catch(() => []),
+      fetchAnalyticsSummaryApi(accessToken).catch(() => null),
+      fetchAnalyticsTrendsApi(30, accessToken).catch(() => []),
+      fetchAnalyticsHotspotsApi(accessToken).catch(() => []),
+    ])
+      .then(([kpiRes, queueRes, summaryRes, trendsRes, hotspotsRes]) => {
+        if (!kpiRes && queueRes.length === 0 && !summaryRes) {
+          setError("Unable to connect to CivicPulse services. Please check network connection.");
+        } else {
+          setError(null);
+          setKpis(kpiRes);
+          setRecentComplaints(queueRes.slice(0, 5));
+          setAnalyticsSummary(summaryRes);
+          setAnalyticsTrends(trendsRes);
+          setAnalyticsHotspots(hotspotsRes);
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Unable to connect to CivicPulse services. Please try again.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [accessToken]);
 
   const getBadgeVariant = (val: string): BadgeVariantType => {
@@ -87,7 +137,7 @@ export default function DashboardOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#D6CFC3] pb-6">
         <div>
           <span className="font-sans text-xs font-semibold tracking-widest text-[#5D5A55] uppercase block">
-            MUNICIPAL OPERATIONS OVERVIEW
+            {user?.role === "admin" ? "CITY-WIDE MUNICIPAL OPERATIONS OVERVIEW" : "DEPARTMENT OPERATIONS OVERVIEW"}
           </span>
           <h1 className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616] tracking-tight mt-1">
             Operational Dashboard
@@ -105,7 +155,24 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Quick Actions & Navigation Cards */}
+      {/* Error State Banner */}
+      {error && !loading && (
+        <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-serif-civic text-lg font-bold text-[#161616]">
+                Unable to Load Dashboard Data
+              </h3>
+              <p className="font-sans text-xs text-[#5D5A55] mt-0.5">
+                {error}
+              </p>
+            </div>
+            <Button variant="dark" size="sm" onClick={loadDashboardData} className="shrink-0">
+              ↻ Retry Connection
+            </Button>
+          </div>
+        </Card>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic flex items-center justify-between">
           <div>
@@ -126,15 +193,17 @@ export default function DashboardOverviewPage() {
         <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic flex items-center justify-between">
           <div>
             <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
-              City Intelligence
+              {user?.role === "admin" ? "City Intelligence" : "Department Intelligence"}
             </h3>
             <p className="font-sans text-xs text-[#5D5A55] mt-0.5">
-              Analyze city-wide trends and hotspot clusters
+              {user?.role === "admin"
+                ? "Analyze city-wide trends and hotspot clusters"
+                : "Analyze department trends and hotspot clusters"}
             </p>
           </div>
           <Link href="/dashboard/intelligence">
             <Button variant="outline" size="sm">
-              Open City Intelligence →
+              {user?.role === "admin" ? "Open City Intelligence →" : "Open Department Intelligence →"}
             </Button>
           </Link>
         </Card>

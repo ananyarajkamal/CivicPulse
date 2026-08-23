@@ -29,7 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.schemas.enums import ComplaintPriority, ComplaintStatus
+from app.schemas.enums import ComplaintPriority, ComplaintSource, ComplaintStatus
 
 
 class Complaint(Base):
@@ -85,6 +85,17 @@ class Complaint(Base):
         index=True,
     )
     is_safety_risk: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source: Mapped[ComplaintSource] = mapped_column(
+        SQLEnum(
+            ComplaintSource,
+            name="source_enum",
+            values_callable=lambda x: [e.value for e in x],
+            create_type=False,
+        ),
+        nullable=False,
+        default=ComplaintSource.WEB,
+        server_default="web",
+    )
 
     location_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     location_lat: Mapped[float | None] = mapped_column(Numeric(10, 8), nullable=True)

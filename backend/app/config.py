@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     # Example: ALLOWED_ORIGINS=http://localhost:3000,https://app.example.com
     ALLOWED_ORIGINS: str | list[str] = "http://localhost:3000"
 
+    # --- Email Notification Settings ---
+    EMAIL_PROVIDER: str = "resend"
+    RESEND_API_KEY: str = ""
+    FROM_EMAIL: str = "CivicPulse <notifications@civicpulse.gov>"
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+
     # --- Geocoding ---
     NOMINATIM_USER_AGENT: str = "CivicPulse/0.1.0"
 

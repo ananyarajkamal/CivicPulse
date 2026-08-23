@@ -3,6 +3,32 @@ import type { CitizenComplaintResponse } from "@/types/complaint";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 
+const DEFAULT_TIMEOUT_MS = 12000;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw new Error("Unable to reach CivicPulse services. Please check network connection.");
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export interface DepartmentItem {
   id: string;
   name: string;
@@ -43,30 +69,42 @@ export interface ComplaintSubmitResponse {
 }
 
 export async function fetchDepartmentsApi(): Promise<DepartmentItem[]> {
-  const res = await fetch(`${API_BASE_URL}/departments`);
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/departments`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchCategoriesApi(): Promise<CategoryItem[]> {
-  const res = await fetch(`${API_BASE_URL}/categories`);
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/categories`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function geocodeAddressApi(query: string): Promise<GeocodeItem[]> {
   if (query.trim().length < 3) return [];
-  const res = await fetch(
-    `${API_BASE_URL}/geocode?q=${encodeURIComponent(query)}`
-  );
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetchWithTimeout(
+      `${API_BASE_URL}/geocode?q=${encodeURIComponent(query)}`
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function submitComplaintApi(
   payload: ComplaintSubmitRequest
 ): Promise<ComplaintSubmitResponse> {
-  const res = await fetch(`${API_BASE_URL}/complaints`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/complaints`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -83,7 +121,7 @@ export async function submitComplaintApi(
 export async function trackComplaintApi(
   trackingId: string
 ): Promise<CitizenComplaintResponse> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${API_BASE_URL}/complaints/track/${encodeURIComponent(trackingId)}`
   );
 

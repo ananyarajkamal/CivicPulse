@@ -3,10 +3,15 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { logoutApi } from "@/lib/api/auth";
+import { getMeApi, logoutApi, refreshTokenApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+
+interface NavGroup {
+  sectionTitle: string;
+  items: { name: string; href: string }[];
+}
 
 export default function DashboardLayout({
   children,
@@ -15,14 +20,50 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+  const { user, isAuthenticated, setAuth, clearAuth } = useAuthStore();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(!isAuthenticated);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
+    let isMounted = true;
+
+    async function hydrateSession() {
+      if (isAuthenticated) {
+        setIsHydrating(false);
+        return;
+      }
+
+      try {
+        const tokenRes = await refreshTokenApi();
+        const me = await getMeApi(tokenRes.access_token);
+        if (isMounted) {
+          setAuth(me, tokenRes.access_token);
+          setIsHydrating(false);
+        }
+      } catch {
+        if (isMounted) {
+          clearAuth();
+          setIsHydrating(false);
+          router.push("/auth/login");
+        }
+      }
     }
-  }, [isAuthenticated, router]);
+
+    hydrateSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, setAuth, clearAuth, router]);
+
+  // Route guard: Non-admin users cannot access Channel Simulator (/dashboard/demo-intake)
+  useEffect(() => {
+    if (!isHydrating && isAuthenticated && user) {
+      if (user.role !== "admin" && pathname.startsWith("/dashboard/demo-intake")) {
+        router.replace("/dashboard");
+      }
+    }
+  }, [isHydrating, isAuthenticated, user, pathname, router]);
 
   const handleLogout = async () => {
     try {
@@ -33,20 +74,68 @@ export default function DashboardLayout({
     }
   };
 
-  if (!isAuthenticated) {
+  if (isHydrating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F1E8] p-6">
-        <p className="font-sans text-[#5D5A55] text-sm">Redirecting to login...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F1E8] p-6 space-y-3">
+        <div className="w-8 h-8 border-2 border-[#B7A58A] border-t-transparent rounded-full animate-spin" />
+        <p className="font-sans text-[#5D5A55] text-xs font-medium">
+          Loading your operational session...
+        </p>
       </div>
     );
   }
 
-  const sidebarLinks = [
-    { name: "Overview", href: "/dashboard" },
-    { name: "Complaints Queue", href: "/dashboard/complaints" },
-    { name: "City Intelligence", href: "/dashboard/intelligence" },
-    { name: "Public Portal", href: "/" },
-  ];
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F1E8] p-6 space-y-3">
+        <p className="font-sans text-[#5D5A55] text-xs font-medium">
+          Redirecting to staff sign in...
+        </p>
+      </div>
+    );
+  }
+
+  const isAdmin = user?.role === "admin";
+
+  const navGroups: NavGroup[] = isAdmin
+    ? [
+        {
+          sectionTitle: "MUNICIPAL OPERATIONS",
+          items: [
+            { name: "Overview", href: "/dashboard" },
+            { name: "Complaints Queue", href: "/dashboard/complaints" },
+            { name: "City Intelligence", href: "/dashboard/intelligence" },
+          ],
+        },
+        {
+          sectionTitle: "SYSTEM TOOLS",
+          items: [
+            { name: "Channel Integration Simulator", href: "/dashboard/demo-intake" },
+          ],
+        },
+        {
+          sectionTitle: "PUBLIC",
+          items: [
+            { name: "Citizen Portal", href: "/" },
+          ],
+        },
+      ]
+    : [
+        {
+          sectionTitle: "MUNICIPAL OPERATIONS",
+          items: [
+            { name: "Overview", href: "/dashboard" },
+            { name: "Complaints Queue", href: "/dashboard/complaints" },
+            { name: "Department Intelligence", href: "/dashboard/intelligence" },
+          ],
+        },
+        {
+          sectionTitle: "PUBLIC",
+          items: [
+            { name: "Citizen Portal", href: "/" },
+          ],
+        },
+      ];
 
   const checkIsActive = (href: string) => {
     if (href === "/dashboard") {
@@ -64,41 +153,45 @@ export default function DashboardLayout({
           {/* Logo Header */}
           <Logo variant="darkFooter" size="md" showTagline={false} />
 
-          {/* Section Navigation */}
-          <div className="space-y-3">
-            <span className="font-sans text-[10px] font-semibold tracking-widest text-[#B7A58A] uppercase block px-3">
-              MUNICIPAL OPERATIONS
-            </span>
-            <nav className="space-y-1">
-              {sidebarLinks.map((item) => {
-                const isActive = checkIsActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`block px-3 py-2 rounded-sm font-sans text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-[#B7A58A]/20 text-[#FBFAF7] border-l-2 border-[#B7A58A]"
-                        : "text-[#D6CFC3] hover:text-[#FBFAF7] hover:bg-[#161616]/40"
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
+          {/* Grouped Navigation */}
+          <div className="space-y-6">
+            {navGroups.map((group) => (
+              <div key={group.sectionTitle} className="space-y-2">
+                <span className="font-sans text-[10px] font-semibold tracking-widest text-[#B7A58A] uppercase block px-3">
+                  {group.sectionTitle}
+                </span>
+                <nav className="space-y-1">
+                  {group.items.map((item) => {
+                    const isActive = checkIsActive(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={`block px-3 py-2 rounded-sm font-sans text-sm font-medium transition-colors ${
+                          isActive
+                            ? "bg-[#B7A58A]/20 text-[#FBFAF7] border-l-2 border-[#B7A58A]"
+                            : "text-[#D6CFC3] hover:text-[#FBFAF7] hover:bg-[#161616]/40"
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Staff User Footer */}
+        {/* Staff User Identity Footer */}
         {user && (
           <div className="pt-6 border-t border-[#5D5A55]/40 space-y-3">
             <div className="space-y-0.5 px-1">
               <p className="font-serif-civic font-bold text-sm text-[#FBFAF7] truncate">
                 {user.full_name}
               </p>
-              <p className="font-sans text-[11px] text-[#B7A58A] capitalize tracking-wide">
-                {user.role.replace("_", " ")}
+              <p className="font-sans text-[11px] text-[#B7A58A] tracking-wide">
+                {isAdmin ? "System Administrator" : "Municipal Officer"}
               </p>
             </div>
             <Button
@@ -131,30 +224,39 @@ export default function DashboardLayout({
         {/* Mobile Drawer Overlay */}
         {mobileDrawerOpen && (
           <div className="lg:hidden bg-[#292724] text-[#FBFAF7] p-6 space-y-6 border-b border-[#161616]">
-            <nav className="space-y-2">
-              {sidebarLinks.map((item) => {
-                const isActive = checkIsActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileDrawerOpen(false)}
-                    className={`block px-3 py-2 text-sm rounded-sm ${
-                      isActive
-                        ? "bg-[#B7A58A]/20 text-[#FBFAF7] font-semibold"
-                        : "text-[#D6CFC3] hover:text-[#FBFAF7]"
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
+            {navGroups.map((group) => (
+              <div key={group.sectionTitle} className="space-y-2">
+                <span className="font-sans text-[10px] font-semibold tracking-widest text-[#B7A58A] uppercase block px-1">
+                  {group.sectionTitle}
+                </span>
+                <nav className="space-y-1">
+                  {group.items.map((item) => {
+                    const isActive = checkIsActive(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setMobileDrawerOpen(false)}
+                        className={`block px-3 py-2 text-sm rounded-sm ${
+                          isActive
+                            ? "bg-[#B7A58A]/20 text-[#FBFAF7] font-semibold"
+                            : "text-[#D6CFC3] hover:text-[#FBFAF7]"
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))}
             {user && (
               <div className="pt-4 border-t border-[#5D5A55]/40 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-xs text-[#FBFAF7]">{user.full_name}</p>
-                  <p className="text-[10px] text-[#B7A58A]">{user.role}</p>
+                  <p className="text-[10px] text-[#B7A58A]">
+                    {isAdmin ? "System Administrator" : "Municipal Officer"}
+                  </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                   Sign Out

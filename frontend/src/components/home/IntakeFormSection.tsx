@@ -390,7 +390,14 @@ export const IntakeFormSection: React.FC = () => {
                     </label>
                     <select
                       value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
+                      onChange={(e) => {
+                        const newCatId = e.target.value;
+                        setCategoryId(newCatId);
+                        const selectedCat = categories.find((c) => c.id === newCatId);
+                        if (selectedCat && selectedCat.department_id) {
+                          setDepartmentId(selectedCat.department_id);
+                        }
+                      }}
                       disabled={loadingCategories}
                       className="w-full px-3.5 py-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A] disabled:opacity-60"
                     >
@@ -435,15 +442,18 @@ export const IntakeFormSection: React.FC = () => {
 
                     <div>
                       <label className="block font-sans text-xs text-[#5D5A55] mb-1">
-                        Email or Phone
+                        Email Address (Optional)
                       </label>
                       <input
-                        type="text"
-                        placeholder="jane@example.com / +1234567890"
+                        type="email"
+                        placeholder="citizen@example.com"
                         value={submitterContact}
                         onChange={(e) => setSubmitterContact(e.target.value)}
                         className="w-full px-3.5 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-[#161616] text-sm focus:outline-none focus:ring-2 focus:ring-[#B7A58A]"
                       />
+                      <span className="text-[11px] text-[#5D5A55] font-sans block mt-1">
+                        Receive complaint status updates by email.
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -24,6 +24,21 @@ export default function AnalyticsPanel({
   const totalClosed = summary.statuses.find((s) => s.status.toLowerCase() === "resolved")?.count || 0;
   const totalOpen = summary.total_complaints - totalClosed;
 
+  // Format SLA compliance rate correctly (API returns 0..100 percentage float)
+  const formatSlaRate = (val: number): number => {
+    const rate = val <= 1.0 && val > 0 ? val * 100 : val;
+    return Math.min(100, Math.max(0, Math.round(rate)));
+  };
+  const slaPercentage = formatSlaRate(summary.sla_compliance_rate);
+
+  // Pluralization helper
+  const formatPlural = (count: number, singular: string, plural: string): string => {
+    return `${count} ${count === 1 ? singular : plural}`;
+  };
+
+  // Hotspots with 2+ complaints are true recurring hotspot clusters
+  const recurringHotspots = hotspots.filter((h) => h.complaint_count >= 2);
+
   return (
     <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-6">
       <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
@@ -41,7 +56,9 @@ export default function AnalyticsPanel({
           </div>
         </div>
 
-        <Badge variant="neutral">System Snapshot ({trends.length} trend days)</Badge>
+        <Badge variant="neutral">
+          System Snapshot ({trends.length === 1 ? "Last 1 day" : `Last ${trends.length} days`})
+        </Badge>
       </div>
 
       {/* Summary KPI Highlights */}
@@ -60,7 +77,7 @@ export default function AnalyticsPanel({
             SLA Compliance Rate
           </span>
           <div className="font-serif-civic text-2xl font-bold text-[#161616]">
-            {Math.round(summary.sla_compliance_rate * 100)}%
+            {slaPercentage}%
           </div>
         </div>
 
@@ -78,7 +95,7 @@ export default function AnalyticsPanel({
             Active Hotspots
           </span>
           <div className="font-serif-civic text-2xl font-bold text-[#161616]">
-            {hotspots.length}
+            {recurringHotspots.length}
           </div>
         </div>
       </div>
@@ -89,7 +106,9 @@ export default function AnalyticsPanel({
         <div className="space-y-3">
           <div className="flex items-center gap-1.5 font-sans text-xs font-semibold uppercase tracking-wider text-[#161616]">
             <HotspotIcon className="w-4 h-4 text-[#292724]" />
-            <span>Geographic Hotspots ({hotspots.length})</span>
+            <span>
+              Geographic Activity ({formatPlural(hotspots.length, "location", "locations")})
+            </span>
           </div>
 
           {hotspots.length > 0 ? (
@@ -101,18 +120,22 @@ export default function AnalyticsPanel({
                 >
                   <div className="space-y-0.5">
                     <div className="font-serif-civic font-bold text-[#161616]">
-                      {hs.primary_category || "General"} ({hs.complaint_count} issues)
+                      {hs.primary_category || "Uncategorized"} ({formatPlural(hs.complaint_count, "issue", "issues")})
                     </div>
                     <div className="font-sans text-[#5D5A55] text-[11px]">
                       {hs.location_name || `GPS: (${hs.latitude.toFixed(3)}, ${hs.longitude.toFixed(3)})`}
                     </div>
                   </div>
-                  <Badge variant="critical">Hotspot</Badge>
+                  <Badge variant={hs.complaint_count >= 2 ? "critical" : "neutral"}>
+                    {hs.complaint_count >= 2 ? "Hotspot" : "Reported"}
+                  </Badge>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="font-sans text-xs text-[#5D5A55] italic">No active hotspots detected.</p>
+            <p className="font-sans text-xs text-[#5D5A55] italic">
+              No recurring geographic hotspots detected yet.
+            </p>
           )}
         </div>
 
@@ -131,7 +154,7 @@ export default function AnalyticsPanel({
                   className="p-2.5 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm flex items-center justify-between text-xs"
                 >
                   <span className="font-sans font-medium text-[#161616] truncate max-w-[200px]">
-                    {cat.category_name}
+                    {cat.category_name || "Uncategorized"}
                   </span>
                   <span className="font-serif-civic font-bold text-[#161616]">{cat.count}</span>
                 </div>

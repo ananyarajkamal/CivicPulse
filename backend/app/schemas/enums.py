@@ -40,3 +40,11 @@ class UserRole(StrEnum):
     MUNICIPAL_OFFICER = "municipal_officer"
     ADMIN = "admin"
 
+
+class ComplaintSource(StrEnum):
+    """Channel source for incoming complaints."""
+
+    WEB = "web"
+    WHATSAPP_DEMO = "whatsapp_demo"
+    SOCIAL_DEMO = "social_demo"
+    MUNICIPAL_DEMO = "municipal_demo"

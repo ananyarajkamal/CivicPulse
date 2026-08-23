@@ -7,10 +7,36 @@ import type {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 
+const DEFAULT_TIMEOUT_MS = 12000;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw new Error("Unable to reach CivicPulse services. Please check network connection.");
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export async function fetchAnalyticsSummaryApi(
   accessToken: string
 ): Promise<AnalyticsSummaryResponse> {
-  const res = await fetch(`${API_BASE_URL}/analytics/summary`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/analytics/summary`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -27,7 +53,7 @@ export async function fetchAnalyticsTrendsApi(
   days: number = 30,
   accessToken: string
 ): Promise<TrendDataPoint[]> {
-  const res = await fetch(`${API_BASE_URL}/analytics/trends?days=${days}`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/analytics/trends?days=${days}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -43,7 +69,7 @@ export async function fetchAnalyticsTrendsApi(
 export async function fetchAnalyticsHotspotsApi(
   accessToken: string
 ): Promise<HotspotClusterItem[]> {
-  const res = await fetch(`${API_BASE_URL}/analytics/hotspots`, {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/analytics/hotspots`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

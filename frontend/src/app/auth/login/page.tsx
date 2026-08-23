@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMeApi, loginApi } from "@/lib/api/auth";
+import { getMeApi, loginApi, refreshTokenApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { Logo } from "@/components/ui/Logo";
 import { Card } from "@/components/ui/Card";
@@ -13,12 +13,34 @@ import { LockIcon } from "@/components/ui/Icons";
 
 export default function StaffLoginPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { isAuthenticated, setAuth } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isAuthenticated) {
+      router.push("/dashboard");
+      return;
+    }
+
+    refreshTokenApi()
+      .then(async (tokenRes) => {
+        const user = await getMeApi(tokenRes.access_token);
+        if (isMounted) {
+          setAuth(user, tokenRes.access_token);
+          router.push("/dashboard");
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, setAuth, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

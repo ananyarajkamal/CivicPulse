@@ -9,6 +9,7 @@ Endpoints:
     PATCH /auth/me       — Update own name / password
 """
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
@@ -19,10 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_officer, get_current_user
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserResponse, UserUpdate
+from app.schemas.enums import UserRole
 from app.security.auth import (
     create_access_token,
     generate_refresh_token_string,
@@ -265,3 +267,27 @@ async def update_me(
     await db.refresh(current_user)
 
     return UserResponse.model_validate(current_user)
+
+
+@router.get(
+    "/officers",
+    response_model=list[UserResponse],
+    summary="List active officers for assignment",
+    description="Return active municipal officers for complaint assignment.",
+)
+async def list_officers(
+    department_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_officer),
+    db: AsyncSession = Depends(get_db),
+) -> list[UserResponse]:
+    """Return active officers. Officers only see their own department."""
+    query = select(User).where(User.is_active.is_(True))
+
+    if current_user.role == UserRole.MUNICIPAL_OFFICER and current_user.department_id:
+        query = query.where(User.department_id == current_user.department_id)
+    elif department_id:
+        query = query.where(User.department_id == department_id)
+
+    res = await db.execute(query.order_by(User.full_name))
+    officers = res.scalars().all()
+    return [UserResponse.model_validate(u) for u in officers]

@@ -44,7 +44,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.enums import ComplaintPriority, ComplaintStatus
+from app.schemas.enums import ComplaintPriority, ComplaintSource, ComplaintStatus
 
 
 class TimelineEntry(BaseModel):
@@ -172,6 +172,10 @@ class ComplaintCreateRequest(BaseModel):
         default=None,
         description="Optional department UUID selected by citizen",
     )
+    source: ComplaintSource = Field(
+        default=ComplaintSource.WEB,
+        description="Channel intake source (defaults to 'web')",
+    )
     submitter_name: str | None = Field(
         default=None,
         max_length=255,
@@ -182,6 +186,44 @@ class ComplaintCreateRequest(BaseModel):
         max_length=255,
         description="Voluntary email or phone (never in public response)",
     )
+
+
+class DemoComplaintCreateRequest(BaseModel):
+    """
+    Staff-authenticated multi-channel demo complaint intake schema.
+
+    Accepts simulated non-web channel sources (whatsapp_demo,
+    social_demo, municipal_demo).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    source: ComplaintSource = Field(
+        description="Demo channel source (whatsapp_demo, social_demo, municipal_demo)"
+    )
+    raw_text: str = Field(
+        min_length=10,
+        max_length=2000,
+        description="Detailed description of the civic issue (10-2000 chars)",
+    )
+    location_text: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Raw location text described by citizen",
+    )
+    location_lat: float | None = Field(
+        default=None, ge=-90.0, le=90.0
+    )
+    location_lng: float | None = Field(
+        default=None, ge=-180.0, le=180.0
+    )
+    location_address: str | None = Field(
+        default=None, max_length=500
+    )
+    category_id: str | None = None
+    department_id: str | None = None
+    submitter_name: str | None = Field(default=None, max_length=255)
+    submitter_contact: str | None = Field(default=None, max_length=255)
 
 
 class ComplaintCreateResponse(BaseModel):
@@ -229,6 +271,7 @@ class StaffComplaintDetailResponse(BaseModel):
 
     id: uuid.UUID
     tracking_id: str
+    source: ComplaintSource = Field(default=ComplaintSource.WEB)
     title: str | None = None
     raw_text: str
     submitter_name: str | None = None

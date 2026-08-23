@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { FullCityIntelligenceView } from "@/components/dashboard/FullCityIntelligenceView";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import {
   fetchAnalyticsHotspotsApi,
   fetchAnalyticsSummaryApi,
@@ -16,7 +17,8 @@ import type {
 } from "@/types/analytics";
 
 export default function CityIntelligencePage() {
-  const { accessToken } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   const [summary, setSummary] = useState<AnalyticsSummaryResponse | null>(null);
   const [trends, setTrends] = useState<TrendDataPoint[]>([]);
@@ -24,29 +26,67 @@ export default function CityIntelligencePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (accessToken) {
-      Promise.all([
-        fetchAnalyticsSummaryApi(accessToken),
-        fetchAnalyticsTrendsApi(30, accessToken),
-        fetchAnalyticsHotspotsApi(accessToken),
-      ])
-        .then(([summaryRes, trendsRes, hotspotsRes]) => {
+  const loadIntelligenceData = () => {
+    if (!accessToken) return;
+
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      fetchAnalyticsSummaryApi(accessToken).catch(() => null),
+      fetchAnalyticsTrendsApi(30, accessToken).catch(() => []),
+      fetchAnalyticsHotspotsApi(accessToken).catch(() => []),
+    ])
+      .then(([summaryRes, trendsRes, hotspotsRes]) => {
+        if (!summaryRes) {
+          setError("Operational intelligence data is temporarily unavailable. Please try again.");
+        } else {
+          setError(null);
           setSummary(summaryRes);
           setTrends(trendsRes);
           setHotspots(hotspotsRes);
-        })
-        .catch((err: unknown) => {
-          if (err instanceof Error) {
-            setError(err.message);
-          } else {
-            setError("Failed to load city intelligence data.");
-          }
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Failed to load operational intelligence data.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    Promise.all([
+      fetchAnalyticsSummaryApi(accessToken).catch(() => null),
+      fetchAnalyticsTrendsApi(30, accessToken).catch(() => []),
+      fetchAnalyticsHotspotsApi(accessToken).catch(() => []),
+    ])
+      .then(([summaryRes, trendsRes, hotspotsRes]) => {
+        if (!summaryRes) {
+          setError("Operational intelligence data is temporarily unavailable. Please try again.");
+        } else {
+          setError(null);
+          setSummary(summaryRes);
+          setTrends(trendsRes);
+          setHotspots(hotspotsRes);
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Failed to load operational intelligence data.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [accessToken]);
 
   return (
@@ -54,10 +94,10 @@ export default function CityIntelligencePage() {
       {/* Intelligence Header */}
       <div className="border-b border-[#D6CFC3] pb-6">
         <span className="font-sans text-xs font-semibold tracking-widest text-[#5D5A55] uppercase block">
-          MUNICIPAL INTELLIGENCE &amp; ANALYTICS
+          {isAdmin ? "CITY-WIDE MUNICIPAL INTELLIGENCE" : "DEPARTMENTAL INTELLIGENCE & ANALYTICS"}
         </span>
         <h1 className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616] tracking-tight mt-1">
-          City Intelligence
+          {isAdmin ? "City Intelligence" : "Department Intelligence"}
         </h1>
         <p className="font-sans text-sm text-[#5D5A55] mt-1">
           Aggregated complaint volume trends, department SLAs, and geographic hazard clusters.
@@ -81,6 +121,11 @@ export default function CityIntelligencePage() {
           <p className="font-sans text-sm text-[#5D5A55] max-w-md mx-auto">
             {error}
           </p>
+          <div>
+            <Button variant="dark" size="sm" onClick={loadIntelligenceData}>
+              ↻ Retry Connection
+            </Button>
+          </div>
         </Card>
       )}
 

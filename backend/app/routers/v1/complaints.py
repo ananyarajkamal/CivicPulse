@@ -20,10 +20,11 @@ from sqlalchemy.orm import selectinload
 
 from app.ai.intelligence_agent import IntelligenceAgent
 from app.database import get_db
-from app.dependencies import get_current_officer
+from app.dependencies import get_current_admin, get_current_officer
 from app.models.category import ComplaintCategory
 from app.models.comment import ComplaintComment
 from app.models.complaint import Complaint
+from app.models.department import Department
 from app.models.related_complaint import RelatedComplaint
 from app.models.status_history import ComplaintStatusHistory
 from app.models.user import User
@@ -35,14 +36,21 @@ from app.schemas.complaint import (
     CommentResponse,
     ComplaintCreateRequest,
     ComplaintCreateResponse,
+    DemoComplaintCreateRequest,
     KPIResponse,
     RelatedComplaintResponse,
     StaffComplaintDetailResponse,
     StatusUpdateRequest,
     TimelineEntry,
 )
-from app.schemas.enums import ComplaintPriority, ComplaintStatus, UserRole
+from app.schemas.enums import (
+    ComplaintPriority,
+    ComplaintSource,
+    ComplaintStatus,
+    UserRole,
+)
 from app.services.duplicate_service import DuplicateService
+from app.services.notification_service import NotificationService
 from app.services.priority_agent import PriorityAgent
 from app.services.routing_agent import RoutingAgent
 from app.services.sla_service import SLAService
@@ -52,35 +60,35 @@ router = APIRouter(prefix="/complaints", tags=["complaints"])
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post(
-    "",
-    response_model=ComplaintCreateResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Submit citizen complaint",
-    description="Submit an anonymous complaint. Returns a tracking ID.",
-)
-@limiter.limit("5/minute")
-async def submit_complaint(
-    request: Request,
-    payload: ComplaintCreateRequest,
-    db: AsyncSession = Depends(get_db),
-) -> ComplaintCreateResponse:
-    """Submit anonymous citizen complaint and run AI classification."""
+async def process_complaint_pipeline(
+    raw_text: str,
+    location_text: str | None,
+    location_lat: float | None,
+    location_lng: float | None,
+    location_address: str | None,
+    category_id_str: str | None,
+    department_id_str: str | None,
+    submitter_name: str | None,
+    submitter_contact: str | None,
+    source: ComplaintSource,
+    db: AsyncSession,
+) -> Complaint:
+    """Core 6-agent processing pipeline shared across all intake channels."""
     # 1. Sanitize text input (HTML escaping)
-    sanitized_text = html.escape(payload.raw_text.strip())
+    sanitized_text = html.escape(raw_text.strip())
 
     # 2. Parse category and department UUIDs if provided
     cat_uuid: uuid.UUID | None = None
-    if payload.category_id:
+    if category_id_str:
         try:
-            cat_uuid = uuid.UUID(payload.category_id)
+            cat_uuid = uuid.UUID(category_id_str)
         except ValueError:
             cat_uuid = None
 
     dept_uuid: uuid.UUID | None = None
-    if payload.department_id:
+    if department_id_str:
         try:
-            dept_uuid = uuid.UUID(payload.department_id)
+            dept_uuid = uuid.UUID(department_id_str)
         except ValueError:
             dept_uuid = None
 
@@ -98,14 +106,10 @@ async def submit_complaint(
 
     # 4. Create Complaint record
     now = datetime.now(tz=UTC)
-    sub_name = payload.submitter_name.strip() if payload.submitter_name else None
-    sub_contact = (
-        payload.submitter_contact.strip() if payload.submitter_contact else None
-    )
-    loc_text = payload.location_text.strip() if payload.location_text else None
-    loc_addr = (
-        payload.location_address.strip() if payload.location_address else None
-    )
+    sub_name = submitter_name.strip() if submitter_name else None
+    sub_contact = submitter_contact.strip() if submitter_contact else None
+    loc_text = location_text.strip() if location_text else None
+    loc_addr = location_address.strip() if location_address else None
 
     complaint = Complaint(
         tracking_id=tracking_id,
@@ -113,13 +117,14 @@ async def submit_complaint(
         submitter_contact=sub_contact,
         raw_text=sanitized_text,
         location_text=loc_text,
-        location_lat=payload.location_lat,
-        location_lng=payload.location_lng,
+        location_lat=location_lat,
+        location_lng=location_lng,
         location_address=loc_addr,
         category_id=cat_uuid,
         department_id=dept_uuid,
         status=ComplaintStatus.REPORTED,
         priority=ComplaintPriority.MEDIUM,
+        source=source,
         created_at=now,
     )
     db.add(complaint)
@@ -130,7 +135,7 @@ async def submit_complaint(
         complaint_id=complaint.id,
         from_status=None,
         to_status=ComplaintStatus.REPORTED,
-        notes="Complaint registered by citizen",
+        notes=f"Complaint registered via {source.value}",
         created_at=now,
     )
     db.add(status_entry)
@@ -160,34 +165,196 @@ async def submit_complaint(
                 if not complaint.department_id:
                     complaint.department_id = matched_cat.department_id
 
-    # 7. Phase 5: Routing Agent
+    # 7. Routing Agent
     routed_dept_id = await RoutingAgent().route_complaint(complaint, db)
     if routed_dept_id:
         complaint.department_id = routed_dept_id
 
-    # 8. Phase 5: Duplicate Detection Service
+    # 8. Duplicate Detection Service
     dupe_id, _ = await DuplicateService().process_duplicates(complaint, db)
     if dupe_id:
         complaint.duplicate_of = dupe_id
 
-    # 9. Phase 5: Priority Agent
+    # 9. Priority Agent
     p_score, p_enum = await PriorityAgent().calculate_priority(
         complaint, db, ai_severity=ai_sev
     )
     complaint.priority_score = p_score
     complaint.priority = p_enum
 
-    # 10. Phase 5: SLA Service
+    # 10. SLA Service
     deadline, breached = await SLAService().calculate_sla(complaint, db)
     complaint.sla_deadline = deadline
     complaint.sla_breached = breached
 
     await db.commit()
 
+    # 11. Trigger Proactive Citizen Email Notification if email present
+    if NotificationService.is_valid_email(complaint.submitter_contact):
+        try:
+            dept_name = None
+            if complaint.department_id:
+                dept_res = await db.execute(
+                    select(Department.name).where(
+                        Department.id == complaint.department_id
+                    )
+                )
+                dept_name = dept_res.scalar_one_or_none()
+
+            await NotificationService.notify_complaint_received(
+                to_email=complaint.submitter_contact,
+                tracking_id=complaint.tracking_id,
+                title=complaint.title or complaint.raw_text[:50],
+                department_name=dept_name,
+                sla_deadline=complaint.sla_deadline,
+            )
+        except Exception:
+            pass
+
+    return complaint
+
+
+@router.post(
+    "",
+    response_model=ComplaintCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit citizen complaint",
+    description="Submit an anonymous complaint. Returns a tracking ID.",
+)
+@limiter.limit("5/minute")
+async def submit_complaint(
+    request: Request,
+    payload: ComplaintCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ComplaintCreateResponse:
+    """Submit anonymous citizen complaint via public web portal."""
+    # SECURITY BOUNDARY: Public portal submission ALWAYS forces source = WEB
+    complaint = await process_complaint_pipeline(
+        raw_text=payload.raw_text,
+        location_text=payload.location_text,
+        location_lat=payload.location_lat,
+        location_lng=payload.location_lng,
+        location_address=payload.location_address,
+        category_id_str=payload.category_id,
+        department_id_str=payload.department_id,
+        submitter_name=payload.submitter_name,
+        submitter_contact=payload.submitter_contact,
+        source=ComplaintSource.WEB,
+        db=db,
+    )
+
     return ComplaintCreateResponse(
-        tracking_id=tracking_id,
+        tracking_id=complaint.tracking_id,
         status=ComplaintStatus.REPORTED,
-        created_at=now,
+        created_at=complaint.created_at,
+    )
+
+
+@router.post(
+    "/demo-intake",
+    response_model=StaffComplaintDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit demo channel complaint (Staff/Admin only)",
+    description=(
+        "Simulate multi-channel intake for demonstration "
+        "(WhatsApp, Social, Municipal)."
+    ),
+)
+async def submit_demo_complaint(
+    payload: DemoComplaintCreateRequest,
+    current_user: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> StaffComplaintDetailResponse:
+    """Authenticated demo multi-channel intake endpoint."""
+    if payload.source not in (
+        ComplaintSource.WHATSAPP_DEMO,
+        ComplaintSource.SOCIAL_DEMO,
+        ComplaintSource.MUNICIPAL_DEMO,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Demo intake endpoint requires a valid demo source "
+                "(whatsapp_demo, social_demo, municipal_demo)."
+            ),
+        )
+
+    complaint = await process_complaint_pipeline(
+        raw_text=payload.raw_text,
+        location_text=payload.location_text,
+        location_lat=payload.location_lat,
+        location_lng=payload.location_lng,
+        location_address=payload.location_address,
+        category_id_str=payload.category_id,
+        department_id_str=payload.department_id,
+        submitter_name=payload.submitter_name,
+        submitter_contact=payload.submitter_contact,
+        source=payload.source,
+        db=db,
+    )
+
+    result = await db.execute(
+        select(Complaint)
+        .options(
+            selectinload(Complaint.department),
+            selectinload(Complaint.category),
+            selectinload(Complaint.status_history),
+            selectinload(Complaint.ai_logs),
+        )
+        .where(Complaint.id == complaint.id)
+    )
+    loaded = result.scalar_one()
+
+    def _dt_key(dt_obj: datetime) -> datetime:
+        return dt_obj.replace(tzinfo=UTC) if dt_obj.tzinfo is None else dt_obj
+
+    timeline = [
+        TimelineEntry(status=h.to_status, timestamp=h.created_at)
+        for h in sorted(loaded.status_history, key=lambda x: _dt_key(x.created_at))
+    ]
+
+    ai_logs = [
+        AILogEntry.model_validate(log)
+        for log in sorted(loaded.ai_logs, key=lambda x: _dt_key(x.created_at))
+    ]
+
+    lat = float(loaded.location_lat) if loaded.location_lat is not None else None
+    lng = float(loaded.location_lng) if loaded.location_lng is not None else None
+    conf = float(loaded.ai_confidence) if loaded.ai_confidence is not None else None
+
+    return StaffComplaintDetailResponse(
+        id=loaded.id,
+        tracking_id=loaded.tracking_id,
+        source=loaded.source,
+        title=loaded.title,
+        raw_text=loaded.raw_text,
+        submitter_name=loaded.submitter_name,
+        submitter_contact=loaded.submitter_contact,
+        status=loaded.status,
+        priority=loaded.priority,
+        priority_score=loaded.priority_score,
+        is_safety_risk=loaded.is_safety_risk,
+        location_text=loaded.location_text,
+        location_lat=lat,
+        location_lng=lng,
+        location_address=loaded.location_address,
+        ward=loaded.ward,
+        category_id=loaded.category_id,
+        category_name=loaded.category.name if loaded.category else None,
+        department_id=loaded.department_id,
+        department_name=loaded.department.name if loaded.department else None,
+        ai_classification_raw=loaded.ai_classification_raw,
+        ai_confidence=conf,
+        duplicate_of=loaded.duplicate_of,
+        assigned_to=loaded.assigned_to,
+        sla_deadline=loaded.sla_deadline,
+        sla_breached=SLAService.is_breached(loaded),
+        resolved_at=loaded.resolved_at,
+        resolution_notes=loaded.resolution_notes,
+        created_at=loaded.created_at,
+        updated_at=loaded.updated_at,
+        timeline=timeline,
+        ai_logs=ai_logs,
     )
 
 
@@ -249,7 +416,7 @@ async def track_complaint(
         priority=complaint.priority,
         location_address=complaint.location_address or complaint.location_text,
         sla_deadline=complaint.sla_deadline,
-        sla_breached=complaint.sla_breached,
+        sla_breached=SLAService.is_breached(complaint),
         created_at=complaint.created_at,
         updated_at=complaint.updated_at,
         timeline=timeline,
@@ -272,44 +439,35 @@ async def get_kpi_summary(
       - Municipal Officers view metrics for their assigned department only.
       - Admins view global metrics across all departments.
     """
-    base_query = select(
-        Complaint.id,
-        Complaint.status,
-        Complaint.assigned_to,
-        Complaint.sla_breached,
-    )
+    base_query = select(Complaint)
     if current_user.role == UserRole.MUNICIPAL_OFFICER and current_user.department_id:
         base_query = base_query.where(
             Complaint.department_id == current_user.department_id
         )
 
     res = await db.execute(base_query)
-    rows = res.all()
+    complaints = res.scalars().all()
 
-    total = len(rows)
+    total = len(complaints)
     unassigned = sum(
-        1 for r in rows if r.status == ComplaintStatus.REPORTED or r.assigned_to is None
+        1
+        for c in complaints
+        if c.status == ComplaintStatus.REPORTED or c.assigned_to is None
     )
     in_progress = sum(
         1
-        for r in rows
-        if r.status in (ComplaintStatus.ASSIGNED, ComplaintStatus.IN_PROGRESS)
+        for c in complaints
+        if c.status in (ComplaintStatus.ASSIGNED, ComplaintStatus.IN_PROGRESS)
     )
     resolved = sum(
         1
-        for r in rows
-        if r.status in (ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED)
+        for c in complaints
+        if c.status in (ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED)
     )
     breached = sum(
         1
-        for r in rows
-        if r.sla_breached
-        and r.status
-        not in (
-            ComplaintStatus.RESOLVED,
-            ComplaintStatus.CLOSED,
-            ComplaintStatus.REJECTED,
-        )
+        for c in complaints
+        if SLAService.is_breached(c)
     )
 
     return KPIResponse(
@@ -357,11 +515,14 @@ async def get_complaint_queue(
         query = query.where(Complaint.status == status_filter)
     if priority_filter:
         query = query.where(Complaint.priority == priority_filter)
-    if sla_breached_filter is not None:
-        query = query.where(Complaint.sla_breached == sla_breached_filter)
 
     res = await db.execute(query)
     complaints = res.scalars().all()
+
+    if sla_breached_filter is not None:
+        complaints = [
+            c for c in complaints if SLAService.is_breached(c) == sla_breached_filter
+        ]
 
     output: list[StaffComplaintDetailResponse] = []
     for c in complaints:
@@ -392,6 +553,7 @@ async def get_complaint_queue(
             StaffComplaintDetailResponse(
                 id=c.id,
                 tracking_id=c.tracking_id,
+                source=c.source,
                 title=c.title,
                 raw_text=c.raw_text,
                 submitter_name=c.submitter_name,
@@ -414,7 +576,7 @@ async def get_complaint_queue(
                 duplicate_of=c.duplicate_of,
                 assigned_to=c.assigned_to,
                 sla_deadline=c.sla_deadline,
-                sla_breached=c.sla_breached,
+                sla_breached=SLAService.is_breached(c),
                 resolved_at=c.resolved_at,
                 resolution_notes=c.resolution_notes,
                 created_at=c.created_at,
@@ -491,6 +653,7 @@ async def get_staff_complaint_detail(
     return StaffComplaintDetailResponse(
         id=complaint.id,
         tracking_id=complaint.tracking_id,
+        source=complaint.source,
         title=complaint.title,
         raw_text=complaint.raw_text,
         submitter_name=complaint.submitter_name,
@@ -513,7 +676,7 @@ async def get_staff_complaint_detail(
         duplicate_of=complaint.duplicate_of,
         assigned_to=complaint.assigned_to,
         sla_deadline=complaint.sla_deadline,
-        sla_breached=complaint.sla_breached,
+        sla_breached=SLAService.is_breached(complaint),
         resolved_at=complaint.resolved_at,
         resolution_notes=complaint.resolution_notes,
         created_at=complaint.created_at,
@@ -665,11 +828,30 @@ async def update_complaint_status(
     now = datetime.now(tz=UTC)
     complaint.updated_at = now
 
-    if payload.to_status in (ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED):
-        complaint.resolved_at = now
-
-    if payload.notes:
+    if payload.to_status in (
+        ComplaintStatus.RESOLVED,
+        ComplaintStatus.CLOSED,
+        ComplaintStatus.REJECTED,
+    ):
+        if payload.to_status in (
+            ComplaintStatus.RESOLVED,
+            ComplaintStatus.CLOSED,
+        ) and (not payload.notes or not payload.notes.strip()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "A resolution action summary note is required when resolving "
+                    "or closing a complaint."
+                ),
+            )
+        if not complaint.resolved_at:
+            complaint.resolved_at = now
+        if payload.notes:
+            complaint.resolution_notes = html.escape(payload.notes.strip())
+    elif payload.notes:
         complaint.resolution_notes = html.escape(payload.notes.strip())
+
+    complaint.sla_breached = SLAService.is_breached(complaint, now=now)
 
     history_entry = ComplaintStatusHistory(
         complaint_id=complaint.id,
@@ -681,6 +863,28 @@ async def update_complaint_status(
     )
     db.add(history_entry)
     await db.commit()
+
+    if NotificationService.is_valid_email(complaint.submitter_contact):
+        try:
+            dept_name = None
+            if complaint.department_id:
+                dept_res = await db.execute(
+                    select(Department.name).where(
+                        Department.id == complaint.department_id
+                    )
+                )
+                dept_name = dept_res.scalar_one_or_none()
+
+            await NotificationService.notify_status_update(
+                to_email=complaint.submitter_contact,
+                tracking_id=complaint.tracking_id,
+                title=complaint.title or complaint.raw_text[:50],
+                department_name=dept_name,
+                new_status=payload.to_status,
+                resolution_notes=payload.notes,
+            )
+        except Exception:
+            pass
 
     return await get_staff_complaint_detail(complaint_id, current_user, db)
 

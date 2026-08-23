@@ -31,6 +31,7 @@ from app.schemas.analytics import (
     TrendDataPoint,
 )
 from app.schemas.enums import ComplaintStatus, UserRole
+from app.services.sla_service import SLAService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -66,7 +67,7 @@ async def get_analytics_summary(
     complaints = res.scalars().all()
 
     total = len(complaints)
-    non_breached = sum(1 for c in complaints if not c.sla_breached)
+    non_breached = sum(1 for c in complaints if not SLAService.is_breached(c))
     sla_rate = round((non_breached / total * 100.0), 1) if total > 0 else 100.0
 
     # 2. Priority Breakdown
@@ -186,12 +187,17 @@ async def get_analytics_hotspots(
         else None
     )
 
-    stmt = select(
-        Complaint.location_text,
-        Complaint.location_address,
-        Complaint.location_lat,
-        Complaint.location_lng,
-    ).where(Complaint.status != ComplaintStatus.REJECTED)
+    stmt = (
+        select(
+            Complaint.location_text,
+            Complaint.location_address,
+            Complaint.location_lat,
+            Complaint.location_lng,
+            ComplaintCategory.name,
+        )
+        .outerjoin(ComplaintCategory, Complaint.category_id == ComplaintCategory.id)
+        .where(Complaint.status != ComplaintStatus.REJECTED)
+    )
 
     if dept_id:
         stmt = stmt.where(Complaint.department_id == dept_id)
@@ -200,7 +206,7 @@ async def get_analytics_hotspots(
     rows = res.all()
 
     clusters: dict[str, dict[str, Any]] = {}
-    for loc_text, loc_addr, lat, lng in rows:
+    for loc_text, loc_addr, lat, lng, cat_name in rows:
         label = loc_addr or loc_text or "General Municipal Area"
         key = label.strip().lower()
 
@@ -211,20 +217,35 @@ async def get_analytics_hotspots(
                 "latitude": float(lat) if lat is not None else 40.7128,
                 "longitude": float(lng) if lng is not None else -74.0060,
                 "complaint_count": 0,
+                "categories": {},
             }
         clusters[key]["complaint_count"] += 1
+        cat_label = cat_name or "Uncategorized"
+        curr_cnt = clusters[key]["categories"].get(cat_label, 0)
+        clusters[key]["categories"][cat_label] = curr_cnt + 1
 
     sorted_clusters = sorted(
         clusters.values(), key=lambda c: c["complaint_count"], reverse=True
     )
 
-    return [
-        HotspotClusterItem(
-            id=c["id"],
-            location_name=c["location_name"],
-            latitude=c["latitude"],
-            longitude=c["longitude"],
-            complaint_count=c["complaint_count"],
+    result_clusters = []
+    for c in sorted_clusters:
+        # Determine most frequent category in cluster
+        cats_dict = c["categories"]
+        top_cat = (
+            max(cats_dict.items(), key=lambda x: x[1])[0]
+            if cats_dict
+            else "Uncategorized"
         )
-        for c in sorted_clusters
-    ]
+        result_clusters.append(
+            HotspotClusterItem(
+                id=c["id"],
+                location_name=c["location_name"],
+                latitude=c["latitude"],
+                longitude=c["longitude"],
+                complaint_count=c["complaint_count"],
+                primary_category=top_cat,
+            )
+        )
+
+    return result_clusters

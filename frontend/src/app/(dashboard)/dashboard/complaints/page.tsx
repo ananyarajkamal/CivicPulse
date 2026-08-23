@@ -22,7 +22,8 @@ type BadgeVariantType =
   | "neutral";
 
 export default function ComplaintsQueuePage() {
-  const { accessToken } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   const [complaints, setComplaints] = useState<StaffComplaintDetailResponse[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
@@ -32,21 +33,37 @@ export default function ComplaintsQueuePage() {
   // Filters state
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState(""); // admin-only
+  const [sourceFilter, setSourceFilter] = useState("");
   const [slaFilter, setSlaFilter] = useState(""); // "" | "breached" | "ontrack"
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Resolve officer's department name from the departments list
+  const officerDeptName =
+    departments.find((d) => d.id === user?.department_id)?.name ?? null;
+
+  const getSourceLabel = (src?: string) => {
+    switch (src) {
+      case "whatsapp_demo":
+        return "WhatsApp";
+      case "social_demo":
+        return "Social Media";
+      case "municipal_demo":
+        return "Municipal System";
+      case "web":
+      default:
+        return "Web Portal";
+    }
+  };
+
+  // Fetch departments list (used by admin filter and officer dept name resolution)
   useEffect(() => {
     fetchDepartmentsApi()
       .then(setDepartments)
       .catch(() => []);
   }, []);
 
-  const loadQueue = () => {
-    if (!accessToken) return;
-    setLoading(true);
-    setError(null);
-
+  const buildFilters = () => {
     const filters: {
       status?: string;
       priority?: string;
@@ -56,12 +73,25 @@ export default function ComplaintsQueuePage() {
 
     if (statusFilter) filters.status = statusFilter;
     if (priorityFilter) filters.priority = priorityFilter;
-    if (departmentFilter) filters.department_id = departmentFilter;
+    // Only admin may send department_id filter — backend ignores it for officers anyway,
+    // but we never send it for officers to keep frontend and backend logic aligned.
+    if (isAdmin && departmentFilter) filters.department_id = departmentFilter;
     if (slaFilter === "breached") filters.sla_breached = true;
     if (slaFilter === "ontrack") filters.sla_breached = false;
 
-    fetchStaffComplaintsQueueApi(filters, accessToken)
-      .then(setComplaints)
+    return filters;
+  };
+
+  const loadQueue = () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+
+    fetchStaffComplaintsQueueApi(buildFilters(), accessToken)
+      .then((data) => {
+        setError(null);
+        setComplaints(data);
+      })
       .catch((err: unknown) => {
         if (err instanceof Error) {
           setError(err.message);
@@ -74,24 +104,20 @@ export default function ComplaintsQueuePage() {
       });
   };
 
+  // Initial load + reactive reload when filters change
   useEffect(() => {
     if (!accessToken) return;
-    const filters: {
-      status?: string;
-      priority?: string;
-      department_id?: string;
-      sla_breached?: boolean;
-    } = {};
 
-    if (statusFilter) filters.status = statusFilter;
-    if (priorityFilter) filters.priority = priorityFilter;
-    if (departmentFilter) filters.department_id = departmentFilter;
-    if (slaFilter === "breached") filters.sla_breached = true;
-    if (slaFilter === "ontrack") filters.sla_breached = false;
+    let cancelled = false;
 
-    fetchStaffComplaintsQueueApi(filters, accessToken)
-      .then(setComplaints)
+    fetchStaffComplaintsQueueApi(buildFilters(), accessToken)
+      .then((data) => {
+        if (cancelled) return;
+        setError(null);
+        setComplaints(data);
+      })
       .catch((err: unknown) => {
+        if (cancelled) return;
         if (err instanceof Error) {
           setError(err.message);
         } else {
@@ -99,12 +125,20 @@ export default function ComplaintsQueuePage() {
         }
       })
       .finally(() => {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, statusFilter, priorityFilter, departmentFilter, slaFilter]);
 
-  // Client-side search filtering by Tracking ID or Title/Description
+  // Client-side source and search filtering (these are not sent to backend)
   const filteredComplaints = complaints.filter((c) => {
+    if (sourceFilter && (c.source || "web") !== sourceFilter) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     return (
@@ -116,36 +150,90 @@ export default function ComplaintsQueuePage() {
 
   const getBadgeVariant = (val: string): BadgeVariantType => {
     const s = val.toLowerCase();
-    if (["reported", "assigned", "in_progress", "resolved", "critical", "high", "medium", "low"].includes(s)) {
+    if (
+      [
+        "reported",
+        "assigned",
+        "in_progress",
+        "resolved",
+        "critical",
+        "high",
+        "medium",
+        "low",
+      ].includes(s)
+    ) {
       return s as BadgeVariantType;
     }
     return "neutral";
   };
 
+  // Number of active filter columns: admin has 6, officer has 5 (no dept col)
+  const filterGridCols = isAdmin
+    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3"
+    : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3";
+
   return (
     <div className="space-y-8">
       {/* Queue Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#D6CFC3] pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#D6CFC3] pb-6">
         <div>
+          {/* Department context label — officers only */}
+          {!isAdmin && (
+            <span className="font-sans text-xs font-bold tracking-widest text-[#B7A58A] uppercase block mb-0.5">
+              {officerDeptName
+                ? officerDeptName.toUpperCase()
+                : "YOUR DEPARTMENT"}
+            </span>
+          )}
           <span className="font-sans text-xs font-semibold tracking-widest text-[#5D5A55] uppercase block">
-            MUNICIPAL OPERATIONS WORKFLOW
+            {isAdmin ? "MUNICIPAL OPERATIONS WORKFLOW" : "DEPARTMENT COMPLAINT QUEUE"}
           </span>
           <h1 className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616] tracking-tight mt-1">
             Complaints Queue
           </h1>
           <p className="font-sans text-sm text-[#5D5A55] mt-1">
-            Filter, inspect, and transition citizen complaint records across municipal departments.
+            {isAdmin
+              ? "Filter, inspect, and transition citizen complaint records across all municipal departments."
+              : `Showing complaints assigned to ${officerDeptName ?? "your department"}.`}
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={loadQueue} disabled={loading}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadQueue}
+          disabled={loading}
+          className="shrink-0 mt-1"
+        >
           {loading ? "Refreshing..." : "↻ Refresh Queue"}
         </Button>
       </div>
 
       {/* Staff Filters Bar */}
-      <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+      <Card
+        variant="primary"
+        padding="md"
+        className="border-[#D6CFC3] shadow-civic space-y-4"
+      >
+        <div className={filterGridCols}>
+          {/* Source Channel Filter */}
+          <div>
+            <label className="block font-sans text-[11px] font-semibold text-[#5D5A55] uppercase tracking-wider mb-1">
+              Channel Source
+            </label>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-xs font-sans text-[#161616] focus:outline-none focus:ring-1 focus:ring-[#B7A58A]"
+            >
+              <option value="">All Sources</option>
+              <option value="web">Web Portal</option>
+              <option value="whatsapp_demo">WhatsApp</option>
+              <option value="social_demo">Social Media</option>
+              <option value="municipal_demo">Municipal System</option>
+            </select>
+          </div>
+
           {/* Status Filter */}
           <div>
             <label className="block font-sans text-[11px] font-semibold text-[#5D5A55] uppercase tracking-wider mb-1">
@@ -162,6 +250,7 @@ export default function ComplaintsQueuePage() {
               <option value="in_progress">In Progress</option>
               <option value="resolved">Resolved</option>
               <option value="closed">Closed</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
 
@@ -183,24 +272,26 @@ export default function ComplaintsQueuePage() {
             </select>
           </div>
 
-          {/* Department Filter */}
-          <div>
-            <label className="block font-sans text-[11px] font-semibold text-[#5D5A55] uppercase tracking-wider mb-1">
-              Department
-            </label>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-xs font-sans text-[#161616] focus:outline-none focus:ring-1 focus:ring-[#B7A58A]"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Department Filter — ADMIN ONLY */}
+          {isAdmin && (
+            <div>
+              <label className="block font-sans text-[11px] font-semibold text-[#5D5A55] uppercase tracking-wider mb-1">
+                Department
+              </label>
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm text-xs font-sans text-[#161616] focus:outline-none focus:ring-1 focus:ring-[#B7A58A]"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* SLA Filter */}
           <div>
@@ -242,11 +333,17 @@ export default function ComplaintsQueuePage() {
       )}
 
       {/* Complaints Queue Table */}
-      <Card variant="primary" padding="none" className="border-[#D6CFC3] shadow-civic overflow-hidden">
+      <Card
+        variant="primary"
+        padding="none"
+        className="border-[#D6CFC3] shadow-civic overflow-hidden"
+      >
         {loading ? (
           <div className="p-12 text-center space-y-3">
             <div className="w-8 h-8 border-2 border-[#B7A58A] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="font-sans text-xs text-[#5D5A55]">Loading complaints queue...</p>
+            <p className="font-sans text-xs text-[#5D5A55]">
+              Loading complaints queue...
+            </p>
           </div>
         ) : filteredComplaints.length === 0 ? (
           <div className="p-12 text-center space-y-2">
@@ -263,9 +360,11 @@ export default function ComplaintsQueuePage() {
               <thead className="bg-[#EAE4DA] text-[#161616] uppercase tracking-wider font-semibold border-b border-[#D6CFC3]">
                 <tr>
                   <th className="p-3.5">Tracking ID</th>
+                  <th className="p-3.5">Source</th>
                   <th className="p-3.5">Issue Title</th>
                   <th className="p-3.5">Category</th>
-                  <th className="p-3.5">Department</th>
+                  {/* Show Department column for admins only */}
+                  {isAdmin && <th className="p-3.5">Department</th>}
                   <th className="p-3.5">Priority</th>
                   <th className="p-3.5">Status</th>
                   <th className="p-3.5">SLA Target</th>
@@ -274,9 +373,17 @@ export default function ComplaintsQueuePage() {
               </thead>
               <tbody className="divide-y divide-[#D6CFC3]">
                 {filteredComplaints.map((c) => (
-                  <tr key={c.id} className="hover:bg-[#EAE4DA]/40 transition-colors">
+                  <tr
+                    key={c.id}
+                    className="hover:bg-[#EAE4DA]/40 transition-colors"
+                  >
                     <td className="p-3.5 font-mono font-bold text-[#161616]">
                       {c.tracking_id}
+                    </td>
+                    <td className="p-3.5">
+                      <Badge variant="neutral" className="text-[10px]">
+                        {getSourceLabel(c.source)}
+                      </Badge>
                     </td>
                     <td className="p-3.5 font-medium text-[#161616] max-w-xs truncate">
                       {c.title || c.raw_text}
@@ -284,9 +391,12 @@ export default function ComplaintsQueuePage() {
                     <td className="p-3.5 text-[#5D5A55]">
                       {c.category_name || "General"}
                     </td>
-                    <td className="p-3.5 text-[#5D5A55]">
-                      {c.department_name || "Unassigned"}
-                    </td>
+                    {/* Department column — admin only */}
+                    {isAdmin && (
+                      <td className="p-3.5 text-[#5D5A55]">
+                        {c.department_name || "Unassigned"}
+                      </td>
+                    )}
                     <td className="p-3.5">
                       <Badge variant={getBadgeVariant(c.priority)}>
                         {c.priority}
