@@ -9,10 +9,6 @@ export const HeroSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[580px] lg:min-h-[640px]">
           {/* Left Content (approx 45% width on desktop) */}
           <div className="lg:col-span-6 space-y-6 z-10">
-            <span className="inline-block font-sans text-xs font-semibold tracking-widest uppercase text-[#5D5A55] bg-[#EAE4DA] px-3 py-1 rounded-xs border border-[#D6CFC3]">
-              CIVIC RESOLUTION, REIMAGINED
-            </span>
-
             <h1 className="font-serif-civic text-4xl sm:text-5xl lg:text-6xl font-bold text-[#161616] tracking-tight leading-[1.1]">
               Your Voice.<br />
               Our Responsibility.<br />

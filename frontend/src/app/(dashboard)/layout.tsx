@@ -56,14 +56,7 @@ export default function DashboardLayout({
     };
   }, [isAuthenticated, setAuth, clearAuth, router]);
 
-  // Route guard: Non-admin users cannot access Ingestion Control Room (/dashboard/demo-intake)
-  useEffect(() => {
-    if (!isHydrating && isAuthenticated && user) {
-      if (user.role !== "admin" && pathname.startsWith("/dashboard/demo-intake")) {
-        router.replace("/dashboard");
-      }
-    }
-  }, [isHydrating, isAuthenticated, user, pathname, router]);
+
 
   const handleLogout = async () => {
     try {
@@ -97,45 +90,25 @@ export default function DashboardLayout({
 
   const isAdmin = user?.role === "admin";
 
-  const navGroups: NavGroup[] = isAdmin
-    ? [
+  const navGroups: NavGroup[] = [
+    {
+      sectionTitle: "MUNICIPAL OPERATIONS",
+      items: [
+        { name: "Overview", href: "/dashboard" },
+        { name: "Complaints Queue", href: "/dashboard/complaints" },
         {
-          sectionTitle: "MUNICIPAL OPERATIONS",
-          items: [
-            { name: "Overview", href: "/dashboard" },
-            { name: "Complaints Queue", href: "/dashboard/complaints" },
-            { name: "City Intelligence", href: "/dashboard/intelligence" },
-          ],
+          name: isAdmin ? "City Intelligence" : "Department Intelligence",
+          href: "/dashboard/intelligence",
         },
-        {
-          sectionTitle: "AI INGESTION & TOOLS",
-          items: [
-            { name: "Live Reddit Ingestion Agent", href: "/dashboard/demo-intake" },
-          ],
-        },
-        {
-          sectionTitle: "PUBLIC",
-          items: [
-            { name: "Citizen Portal", href: "/" },
-          ],
-        },
-      ]
-    : [
-        {
-          sectionTitle: "MUNICIPAL OPERATIONS",
-          items: [
-            { name: "Overview", href: "/dashboard" },
-            { name: "Complaints Queue", href: "/dashboard/complaints" },
-            { name: "Department Intelligence", href: "/dashboard/intelligence" },
-          ],
-        },
-        {
-          sectionTitle: "PUBLIC",
-          items: [
-            { name: "Citizen Portal", href: "/" },
-          ],
-        },
-      ];
+      ],
+    },
+    {
+      sectionTitle: "PUBLIC",
+      items: [
+        { name: "Citizen Portal", href: "/" },
+      ],
+    },
+  ];
 
   const checkIsActive = (href: string) => {
     if (href === "/dashboard") {
