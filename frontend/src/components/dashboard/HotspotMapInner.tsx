@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { HotspotClusterItem } from "@/types/analytics";
+import Link from "next/link";
 
 interface HotspotMapInnerProps {
   hotspots: HotspotClusterItem[];
+  onSelectHotspot?: (hotspot: HotspotClusterItem | null) => void;
 }
 
 function FitBounds({ hotspots }: { hotspots: HotspotClusterItem[] }) {
@@ -33,26 +35,29 @@ function FitBounds({ hotspots }: { hotspots: HotspotClusterItem[] }) {
   return null;
 }
 
-function createCustomIcon(count: number, isRecurring: boolean) {
-  const bg = isRecurring ? "#9E524D" : "#292724";
+function createCustomIcon(count: number, isRecurring: boolean, isSelected: boolean) {
+  const bg = isSelected ? "#161616" : isRecurring ? "#9E524D" : "#292724";
+  const border = isSelected ? "#B7A58A" : "#FBFAF7";
+  const scale = isSelected ? "scale(1.08)" : "scale(1)";
 
   const html = `
     <div style="
       background-color: ${bg};
       color: #FBFAF7;
-      border: 2px solid #FBFAF7;
+      border: 2px solid ${border};
       border-radius: 9999px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 11px;
       font-weight: 700;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+      box-shadow: ${isSelected ? '0 0 0 3px rgba(183, 165, 138, 0.4), 0 6px 12px rgba(0,0,0,0.3)' : '0 4px 6px -1px rgba(0, 0, 0, 0.25)'};
+      transform: ${scale};
+      transition: transform 0.15s ease-in-out;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       white-space: nowrap;
     ">
-      <span>📍</span>
       <span>${count} ${count === 1 ? "report" : "reports"}</span>
     </div>
   `;
@@ -60,12 +65,14 @@ function createCustomIcon(count: number, isRecurring: boolean) {
   return L.divIcon({
     html,
     className: "civic-custom-marker",
-    iconSize: [80, 28],
-    iconAnchor: [40, 14],
+    iconSize: [88, 30],
+    iconAnchor: [44, 15],
   });
 }
 
-export default function HotspotMapInner({ hotspots }: HotspotMapInnerProps) {
+export default function HotspotMapInner({ hotspots, onSelectHotspot }: HotspotMapInnerProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const validHotspots = hotspots.filter(
     (h) =>
       typeof h.latitude === "number" &&
@@ -77,7 +84,14 @@ export default function HotspotMapInner({ hotspots }: HotspotMapInnerProps) {
   const defaultCenter: [number, number] =
     validHotspots.length > 0
       ? [validHotspots[0].latitude, validHotspots[0].longitude]
-      : [25.61, 85.14];
+      : [40.7128, -74.0060];
+
+  const handleMarkerClick = (item: HotspotClusterItem) => {
+    setSelectedId(item.id);
+    if (onSelectHotspot) {
+      onSelectHotspot(item);
+    }
+  };
 
   return (
     <div className="w-full h-[380px] sm:h-[450px] rounded-sm overflow-hidden border border-[#D6CFC3] relative z-0">
@@ -95,42 +109,81 @@ export default function HotspotMapInner({ hotspots }: HotspotMapInnerProps) {
 
         {validHotspots.map((item) => {
           const isRecurring = item.complaint_count >= 2;
-          const icon = createCustomIcon(item.complaint_count, isRecurring);
+          const isSelected = selectedId === item.id;
+          const icon = createCustomIcon(item.complaint_count, isRecurring, isSelected);
 
           return (
             <Marker
               key={item.id}
               position={[item.latitude, item.longitude]}
               icon={icon}
+              eventHandlers={{
+                click: () => handleMarkerClick(item),
+              }}
             >
-              <Popup>
-                <div className="font-sans text-xs space-y-1.5 p-0.5">
-                  <div className="flex items-center justify-between gap-2 border-b border-[#D6CFC3] pb-1">
-                    <strong className="font-serif-civic text-sm text-[#161616]">
+              <Popup className="civic-map-popup">
+                <div className="font-sans text-xs space-y-2 p-1 min-w-[220px]">
+                  {/* Title & Badge */}
+                  <div className="flex items-start justify-between gap-2 border-b border-[#D6CFC3] pb-1.5">
+                    <strong className="font-serif-civic text-sm text-[#161616] leading-tight block">
                       {item.location_name}
                     </strong>
-                    {isRecurring && (
-                      <span className="bg-[#9E524D] text-[#FBFAF7] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    {isRecurring ? (
+                      <span className="bg-[#9E524D] text-[#FBFAF7] text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">
                         Hotspot
+                      </span>
+                    ) : (
+                      <span className="bg-[#292724] text-[#FBFAF7] text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">
+                        Single Issue
                       </span>
                     )}
                   </div>
-                  <div className="text-[#5D5A55]">
-                    <span className="font-semibold text-[#161616]">
-                      {item.complaint_count}
-                    </span>{" "}
-                    {item.complaint_count === 1
-                      ? "complaint"
-                      : "related complaints"}
-                  </div>
-                  {item.primary_category && (
-                    <div className="text-[#5D5A55]">
-                      Category:{" "}
-                      <strong className="text-[#161616]">
-                        {item.primary_category}
-                      </strong>
+
+                  {/* Grid Details */}
+                  <div className="space-y-1 text-[#5D5A55] text-xs">
+                    <div className="flex justify-between">
+                      <span>{isRecurring ? "Recurring Complaints:" : "Complaints:"}</span>
+                      <strong className="text-[#161616] font-bold">{item.complaint_count}</strong>
                     </div>
-                  )}
+
+                    {item.primary_category && (
+                      <div className="flex justify-between">
+                        <span>Primary Issue:</span>
+                        <strong className="text-[#161616] truncate max-w-[130px]">{item.primary_category}</strong>
+                      </div>
+                    )}
+
+                    {item.department_name && (
+                      <div className="flex justify-between">
+                        <span>Department:</span>
+                        <strong className="text-[#161616] truncate max-w-[130px]">{item.department_name}</strong>
+                      </div>
+                    )}
+
+                    {typeof item.open_cases === "number" && (
+                      <div className="flex justify-between">
+                        <span>Open / Resolved:</span>
+                        <strong className="text-[#161616]">{item.open_cases} Open / {item.resolved_cases || 0} Done</strong>
+                      </div>
+                    )}
+
+                    {item.highest_priority && (
+                      <div className="flex justify-between">
+                        <span>Highest Priority:</span>
+                        <strong className="text-[#161616]">{item.highest_priority}</strong>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* View Complaints Action */}
+                  <div className="pt-2 border-t border-[#D6CFC3]">
+                    <Link
+                      href={`/dashboard/complaints?q=${encodeURIComponent(item.location_name)}`}
+                      className="block text-center w-full py-1 px-2 bg-[#292724] text-[#FBFAF7] font-sans text-xs font-semibold rounded-xs hover:bg-[#161616] transition-colors"
+                    >
+                      View Related Complaints
+                    </Link>
+                  </div>
                 </div>
               </Popup>
             </Marker>

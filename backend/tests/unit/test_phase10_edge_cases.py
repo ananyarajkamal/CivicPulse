@@ -8,7 +8,6 @@ Validates:
     - Empty location handled safely
 """
 
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -49,6 +48,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -91,12 +91,12 @@ class TestDeliberateEdgeCases:
         assert res.status_code == 404
         assert res.status_code != 500
 
-    async def test_empty_location_handled_safely(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_empty_location_handled_safely(self, client: AsyncClient) -> None:
         res = await client.post(
             "/api/v1/complaints",
-            json={"raw_text": "Water main leak near downtown area with no specific address."},
+            json={
+                "raw_text": "Water main leak near downtown area with no specific address."
+            },
         )
         assert res.status_code == 201
         data = res.json()

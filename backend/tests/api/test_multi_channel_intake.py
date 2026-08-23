@@ -57,6 +57,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -257,7 +258,9 @@ class TestMultiChannelIntakeFoundation:
         await setup_db.commit()
 
         token = create_access_token(
-            user_id=str(officer.id), role=officer.role.value, department_id=str(officer.department_id) if officer.department_id else None
+            user_id=str(officer.id),
+            role=officer.role.value,
+            department_id=str(officer.department_id) if officer.department_id else None,
         )
 
         res = await client.post(

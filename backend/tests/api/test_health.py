@@ -102,7 +102,10 @@ class TestCorsMiddleware:
             "/api/v1/health",
             headers={"Origin": "http://localhost:3000"},
         )
-        assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
+        assert (
+            response.headers.get("access-control-allow-origin")
+            == "http://localhost:3000"
+        )
 
     async def test_unlisted_origin_does_not_get_cors_header(
         self, client: AsyncClient

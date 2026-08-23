@@ -26,8 +26,7 @@ export const MissionSection: React.FC = () => {
                 href="#how-it-works"
                 className="font-sans text-sm font-semibold text-[#161616] hover:text-[#5D5A55] inline-flex items-center gap-1 group"
               >
-                Learn About CivicPulse{" "}
-                <span className="transition-transform group-hover:translate-x-1">→</span>
+                Learn About CivicPulse
               </a>
             </div>
           </div>

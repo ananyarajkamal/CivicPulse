@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 
 interface HotspotMapProps {
   hotspots: HotspotClusterItem[];
+  onSelectHotspot?: (hotspot: HotspotClusterItem | null) => void;
 }
 
 const HotspotMapInner = dynamic(() => import("./HotspotMapInner"), {
@@ -64,7 +65,7 @@ class MapErrorBoundary extends Component<
   }
 }
 
-export const HotspotMap: React.FC<HotspotMapProps> = ({ hotspots }) => {
+export const HotspotMap: React.FC<HotspotMapProps> = ({ hotspots, onSelectHotspot }) => {
   const validHotspots = hotspots.filter(
     (h) =>
       typeof h.latitude === "number" &&
@@ -93,7 +94,7 @@ export const HotspotMap: React.FC<HotspotMapProps> = ({ hotspots }) => {
 
   return (
     <MapErrorBoundary>
-      <HotspotMapInner hotspots={validHotspots} />
+      <HotspotMapInner hotspots={validHotspots} onSelectHotspot={onSelectHotspot} />
     </MapErrorBoundary>
   );
 };

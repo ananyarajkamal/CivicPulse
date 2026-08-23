@@ -23,7 +23,7 @@ export default function CityIntelligencePage() {
   const [summary, setSummary] = useState<AnalyticsSummaryResponse | null>(null);
   const [trends, setTrends] = useState<TrendDataPoint[]>([]);
   const [hotspots, setHotspots] = useState<HotspotClusterItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(accessToken));
   const [error, setError] = useState<string | null>(null);
 
   const loadIntelligenceData = () => {
@@ -123,7 +123,7 @@ export default function CityIntelligencePage() {
           </p>
           <div>
             <Button variant="dark" size="sm" onClick={loadIntelligenceData}>
-              ↻ Retry Connection
+              Retry Connection
             </Button>
           </div>
         </Card>

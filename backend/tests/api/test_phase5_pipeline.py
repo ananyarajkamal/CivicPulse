@@ -51,6 +51,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -64,7 +65,9 @@ async def client(setup_db: AsyncSession) -> AsyncClient:
 
 
 @pytest.fixture
-async def seed_dept_and_cat(setup_db: AsyncSession) -> tuple[Department, ComplaintCategory]:
+async def seed_dept_and_cat(
+    setup_db: AsyncSession,
+) -> tuple[Department, ComplaintCategory]:
     """Seed test department and category."""
     dept = Department(
         name="Water Supply & Sewerage",
@@ -99,12 +102,16 @@ class TestPriorityAgent:
             is_safety_risk=False,
             status=ComplaintStatus.REPORTED,
         )
-        score, prio = await agent.calculate_priority(complaint, setup_db, ai_severity="low")
+        score, prio = await agent.calculate_priority(
+            complaint, setup_db, ai_severity="low"
+        )
         assert score < 20
         assert prio == ComplaintPriority.LOW
 
     async def test_critical_priority_score(
-        self, setup_db: AsyncSession, seed_dept_and_cat: tuple[Department, ComplaintCategory]
+        self,
+        setup_db: AsyncSession,
+        seed_dept_and_cat: tuple[Department, ComplaintCategory],
     ) -> None:
         _, cat = seed_dept_and_cat
         agent = PriorityAgent()
@@ -116,7 +123,9 @@ class TestPriorityAgent:
             status=ComplaintStatus.REPORTED,
         )
         # 30 (high severity) + 20 (safety) + 5 (cat baseline) = 55+
-        score, prio = await agent.calculate_priority(complaint, setup_db, ai_severity="critical")
+        score, prio = await agent.calculate_priority(
+            complaint, setup_db, ai_severity="critical"
+        )
         assert score >= 60
         assert prio == ComplaintPriority.CRITICAL
 
@@ -125,7 +134,9 @@ class TestRoutingAgent:
     """Unit tests for RoutingAgent."""
 
     async def test_category_routing(
-        self, setup_db: AsyncSession, seed_dept_and_cat: tuple[Department, ComplaintCategory]
+        self,
+        setup_db: AsyncSession,
+        seed_dept_and_cat: tuple[Department, ComplaintCategory],
     ) -> None:
         dept, cat = seed_dept_and_cat
         agent = RoutingAgent()
@@ -138,7 +149,9 @@ class TestRoutingAgent:
         assert routed_dept == dept.id
 
     async def test_keyword_fallback_routing(
-        self, setup_db: AsyncSession, seed_dept_and_cat: tuple[Department, ComplaintCategory]
+        self,
+        setup_db: AsyncSession,
+        seed_dept_and_cat: tuple[Department, ComplaintCategory],
     ) -> None:
         dept, _ = seed_dept_and_cat
         agent = RoutingAgent()
@@ -155,7 +168,9 @@ class TestSLAService:
     """Unit tests for SLAService calculation."""
 
     async def test_sla_calculation(
-        self, setup_db: AsyncSession, seed_dept_and_cat: tuple[Department, ComplaintCategory]
+        self,
+        setup_db: AsyncSession,
+        seed_dept_and_cat: tuple[Department, ComplaintCategory],
     ) -> None:
         _, cat = seed_dept_and_cat
         service = SLAService()
@@ -188,7 +203,9 @@ class TestDuplicateService:
     """Unit tests for DuplicateService clustering."""
 
     async def test_duplicate_detection_proximity(
-        self, setup_db: AsyncSession, seed_dept_and_cat: tuple[Department, ComplaintCategory]
+        self,
+        setup_db: AsyncSession,
+        seed_dept_and_cat: tuple[Department, ComplaintCategory],
     ) -> None:
         _, cat = seed_dept_and_cat
         dupe_service = DuplicateService()
@@ -227,7 +244,9 @@ class TestDuplicateService:
 class TestPhase5EndToEndIntakePipeline:
     """End-to-end API test for Phase 5 intake pipeline."""
 
-    async def test_complaint_intake_populates_phase5_fields(self, client: AsyncClient) -> None:
+    async def test_complaint_intake_populates_phase5_fields(
+        self, client: AsyncClient
+    ) -> None:
         response = await client.post(
             "/api/v1/complaints",
             json={

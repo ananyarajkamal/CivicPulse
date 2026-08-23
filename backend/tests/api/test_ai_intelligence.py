@@ -41,6 +41,7 @@ async def setup_db() -> AsyncSession:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -123,7 +124,9 @@ class TestAIFactoryAndMock:
 class TestAIIntelligenceAgent:
     """Tests for IntelligenceAgent processing."""
 
-    async def test_agent_process_complaint_success(self, setup_db: AsyncSession) -> None:
+    async def test_agent_process_complaint_success(
+        self, setup_db: AsyncSession
+    ) -> None:
         agent = IntelligenceAgent(provider=MockAIProvider())
         complaint_id = uuid.uuid4()
         result = await agent.process_complaint(
@@ -139,7 +142,9 @@ class TestAIIntelligenceAgent:
 class TestComplaintSubmissionWithAI:
     """Tests for POST /api/v1/complaints triggering AI."""
 
-    async def test_submit_complaint_populates_ai_fields(self, client: AsyncClient) -> None:
+    async def test_submit_complaint_populates_ai_fields(
+        self, client: AsyncClient
+    ) -> None:
         response = await client.post(
             "/api/v1/complaints",
             json={
@@ -160,7 +165,9 @@ class TestComplaintSubmissionWithAI:
 class TestStaffComplaintDetailEndpoint:
     """Tests for GET /api/v1/complaints/{id} staff endpoint."""
 
-    async def test_unauthenticated_staff_detail_rejected(self, client: AsyncClient) -> None:
+    async def test_unauthenticated_staff_detail_rejected(
+        self, client: AsyncClient
+    ) -> None:
         fake_uuid = str(uuid.uuid4())
         response = await client.get(f"/api/v1/complaints/{fake_uuid}")
         assert response.status_code == 401

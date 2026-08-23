@@ -27,7 +27,7 @@ export default function ComplaintsQueuePage() {
 
   const [complaints, setComplaints] = useState<StaffComplaintDetailResponse[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(accessToken));
   const [error, setError] = useState<string | null>(null);
 
   // Filters state
@@ -205,7 +205,7 @@ export default function ComplaintsQueuePage() {
           disabled={loading}
           className="shrink-0 mt-1"
         >
-          {loading ? "Refreshing..." : "↻ Refresh Queue"}
+          {loading ? "Refreshing..." : "Refresh Queue"}
         </Button>
       </div>
 
@@ -418,8 +418,8 @@ export default function ComplaintsQueuePage() {
                     </td>
                     <td className="p-3.5 text-right">
                       <Link href={`/dashboard/complaints/${c.id}`}>
-                        <Button variant="dark" size="sm" className="text-xs">
-                          Inspect →
+                        <Button variant="outline" size="sm" className="text-xs">
+                          Inspect
                         </Button>
                       </Link>
                     </td>

@@ -8,7 +8,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { TrackingIcon, AnonymousIcon } from "@/components/ui/Icons";
+import { TrackingIcon, AnonymousIcon, CheckCircleIcon } from "@/components/ui/Icons";
 import {
   fetchCategoriesApi,
   fetchDepartmentsApi,
@@ -238,8 +238,8 @@ export const IntakeFormSection: React.FC = () => {
 
           {submittedId ? (
             <Card variant="primary" padding="lg" className="border-[#B7A58A] bg-[#FBFAF7] text-center space-y-6 max-w-2xl mx-auto shadow-civic">
-              <div className="w-14 h-14 rounded-full bg-[#EAE4DA] text-[#292724] flex items-center justify-center mx-auto font-serif-civic text-2xl font-bold border border-[#B7A58A]">
-                ✓
+              <div className="w-14 h-14 rounded-full bg-[#EAE4DA] text-[#292724] flex items-center justify-center mx-auto border border-[#B7A58A]">
+                <CheckCircleIcon size={24} className="text-[#292724]" />
               </div>
 
               <div className="space-y-2">
@@ -262,7 +262,7 @@ export const IntakeFormSection: React.FC = () => {
 
                 <Link href={`/track/${submittedId}`}>
                   <Button variant="dark" size="md">
-                    Go to Tracking Page →
+                    Go to Tracking Page
                   </Button>
                 </Link>
               </div>
@@ -336,7 +336,7 @@ export const IntakeFormSection: React.FC = () => {
                       onClick={handleGPSLocation}
                       className="shrink-0"
                     >
-                      📍 Use My GPS
+                      Use My GPS
                     </Button>
                   </div>
 
@@ -466,7 +466,7 @@ export const IntakeFormSection: React.FC = () => {
                   disabled={loading}
                   className="w-full justify-center shadow-civic"
                 >
-                  {loading ? "Submitting Complaint..." : "Submit Anonymous Complaint →"}
+                  {loading ? "Submitting Complaint..." : "Submit Anonymous Complaint"}
                 </Button>
               </form>
             </Card>

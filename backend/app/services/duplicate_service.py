@@ -46,9 +46,7 @@ class DuplicateService:
             Complaint.id != complaint.id,
             Complaint.category_id == complaint.category_id,
             Complaint.created_at >= seven_days_ago,
-            Complaint.status.not_in(
-                [ComplaintStatus.REJECTED, ComplaintStatus.CLOSED]
-            ),
+            Complaint.status.not_in([ComplaintStatus.REJECTED, ComplaintStatus.CLOSED]),
         )
         res = await db.execute(query)
         candidates = res.scalars().all()

@@ -15,13 +15,15 @@ Note: OpenAPI docs (/api/docs, /api/redoc) are only exposed when DEBUG=True.
       This prevents schema exposure in production environments.
 """
 
+import asyncio
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.database import AsyncSessionLocal
 from app.middleware.error_handler import setup_error_handlers
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
@@ -32,7 +34,22 @@ from app.routers.v1.complaints import router as complaints_router
 from app.routers.v1.departments import router as departments_router
 from app.routers.v1.geocode import router as geocode_router
 from app.routers.v1.health import router as health_router
+from app.routers.v1.ingestion import router as ingestion_router
+from app.services.ingestion_agent import IngestionAgent
 from app.utils.logging_config import configure_logging
+
+
+async def background_autonomous_sentinel() -> None:
+    """Autonomous Ingestion Agent: silently scans Indian channels every 60s."""
+    while True:
+        try:
+            await asyncio.sleep(60)
+            async with AsyncSessionLocal() as db:
+                await IngestionAgent.deep_scan_all_cities(db=db)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
 
 
 @asynccontextmanager
@@ -40,12 +57,17 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Application lifespan handler.
 
-    Startup: Configure structured logging.
-    Shutdown: (future) close DB connection pool, flush logs.
+    Startup: Configure structured logging and launch Autonomous Sentinel.
+    Shutdown: Stop background workers and flush logs.
     """
     configure_logging()
-    yield
-    # Phase 2: await db_engine.dispose()
+    worker_task = asyncio.create_task(background_autonomous_sentinel())
+    try:
+        yield
+    finally:
+        worker_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await worker_task
 
 
 def create_app() -> FastAPI:
@@ -60,7 +82,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="CivicPulse API",
         description=(
-            "The Agentic Civic Resolution Platform — "
+            "The Agentic Civic Resolution Platform: "
             "backend API for citizen complaint processing and municipal intelligence."
         ),
         version=settings.APP_VERSION,
@@ -106,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(geocode_router, prefix="/api/v1")
     app.include_router(complaints_router, prefix="/api/v1")
     app.include_router(analytics_router, prefix="/api/v1")
+    app.include_router(ingestion_router, prefix="/api/v1")
 
     return app
 

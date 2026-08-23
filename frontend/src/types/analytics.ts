@@ -39,4 +39,8 @@ export interface HotspotClusterItem {
   longitude: number;
   complaint_count: number;
   primary_category?: string | null;
+  department_name?: string | null;
+  open_cases?: number;
+  resolved_cases?: number;
+  highest_priority?: string | null;
 }

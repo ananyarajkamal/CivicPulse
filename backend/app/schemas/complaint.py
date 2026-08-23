@@ -73,7 +73,7 @@ class CitizenComplaintResponse(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,  # Enables construction from SQLAlchemy ORM objects
-        frozen=True,           # Immutable once created — prevents accidental mutation
+        frozen=True,  # Immutable once created — prevents accidental mutation
     )
 
     # --- Public identifier ---
@@ -211,15 +211,9 @@ class DemoComplaintCreateRequest(BaseModel):
         max_length=500,
         description="Raw location text described by citizen",
     )
-    location_lat: float | None = Field(
-        default=None, ge=-90.0, le=90.0
-    )
-    location_lng: float | None = Field(
-        default=None, ge=-180.0, le=180.0
-    )
-    location_address: str | None = Field(
-        default=None, max_length=500
-    )
+    location_lat: float | None = Field(default=None, ge=-90.0, le=90.0)
+    location_lng: float | None = Field(default=None, ge=-180.0, le=180.0)
+    location_address: str | None = Field(default=None, max_length=500)
     category_id: str | None = None
     department_id: str | None = None
     submitter_name: str | None = Field(default=None, max_length=255)
@@ -324,6 +318,7 @@ class StatusUpdateRequest(BaseModel):
 
     to_status: ComplaintStatus
     notes: str | None = None
+    rejection_reason: str | None = None
 
 
 class AssignOfficerRequest(BaseModel):
@@ -360,5 +355,3 @@ class KPIResponse(BaseModel):
     in_progress_complaints: int
     resolved_complaints: int
     sla_breached_complaints: int
-
-

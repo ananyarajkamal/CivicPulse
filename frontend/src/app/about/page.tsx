@@ -29,7 +29,7 @@ export default function AboutPage() {
     },
     {
       title: "Department Routing",
-      desc: "Directs issues straight to specialized field teams—whether Roads, Water, Sanitation, or Public Lighting.",
+      desc: "Directs issues straight to specialized field teams: whether Roads, Water, Sanitation, or Public Lighting.",
     },
     {
       title: "Transparent Tracking",

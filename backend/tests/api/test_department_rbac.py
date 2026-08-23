@@ -65,6 +65,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -237,9 +238,7 @@ class TestDepartmentRBACQueue:
         assert res.status_code == 200
         data = res.json()
         # Backend must ignore the department_id param for officers and scope by their own dept
-        assert all(
-            c["department_id"] == str(seed_data["roads_dept"].id) for c in data
-        )
+        assert all(c["department_id"] == str(seed_data["roads_dept"].id) for c in data)
         # Water complaint must NOT appear
         assert str(seed_data["water_complaint"].id) not in {c["id"] for c in data}
 
@@ -254,9 +253,7 @@ class TestDepartmentRBACQueue:
         )
         assert res.status_code == 200
         data = res.json()
-        assert all(
-            c["department_id"] == str(seed_data["water_dept"].id) for c in data
-        )
+        assert all(c["department_id"] == str(seed_data["water_dept"].id) for c in data)
         assert str(seed_data["roads_complaint"].id) not in {c["id"] for c in data}
 
 
@@ -449,7 +446,9 @@ class TestPublicPrivacyBoundary:
             "ai_classification_raw",
         ]
         for field in forbidden_fields:
-            assert field not in data, f"Protected field '{field}' leaked in public tracker"
+            assert field not in data, (
+                f"Protected field '{field}' leaked in public tracker"
+            )
 
 
 class TestTerminalStatusRBAC:
@@ -464,16 +463,16 @@ class TestTerminalStatusRBAC:
         # Transition: reported -> rejected
         res = await client.patch(
             f"/api/v1/complaints/{roads_id}/status",
-            json={"to_status": "rejected", "note": "Outside jurisdiction"},
+            json={"to_status": "rejected", "notes": "Outside jurisdiction"},
             headers={"Authorization": f"Bearer {seed_data['roads_token']}"},
         )
         assert res.status_code == 200
         assert res.json()["status"] == "rejected"
 
-        # Attempt further transition from rejected — must be rejected
+        # Attempt invalid direct transition from rejected to in_progress — must be blocked (400)
         res2 = await client.patch(
             f"/api/v1/complaints/{roads_id}/status",
-            json={"to_status": "in_progress", "note": "Attempting invalid transition"},
+            json={"to_status": "in_progress", "notes": "Attempting invalid transition"},
             headers={"Authorization": f"Bearer {seed_data['roads_token']}"},
         )
         assert res2.status_code == 400

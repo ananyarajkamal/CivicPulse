@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CivicPulse — Stronger Cities. Together.",
+  title: "CivicPulse: Stronger Cities. Together.",
   description:
     "AI-powered civic complaint resolution and city intelligence platform. Enabling transparent, accountable municipal governance.",
 };

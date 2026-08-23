@@ -34,11 +34,13 @@ export default function TrackingPage({
   const router = useRouter();
 
   const [complaint, setComplaint] = useState<CitizenComplaintResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(trackingId));
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(trackingId);
 
   useEffect(() => {
+    if (!trackingId) return;
+
     let isMounted = true;
 
     trackComplaintApi(trackingId)
@@ -150,11 +152,11 @@ export default function TrackingPage({
                 </div>
               </div>
               <div>
-                <Link href="/">
-                  <Button variant="dark" size="md">
-                    Return Home →
-                  </Button>
-                </Link>
+                  <Link href="/">
+                    <Button variant="dark" size="sm">
+                      Return Home
+                    </Button>
+                  </Link>
               </div>
             </Card>
           )}
@@ -234,7 +236,7 @@ export default function TrackingPage({
 
                 {complaint.location_address && (
                   <div className="p-3 bg-[#EAE4DA]/50 border border-[#D6CFC3] rounded-sm font-sans text-xs text-[#161616] flex items-center gap-2">
-                    <span className="font-semibold shrink-0">📍 Verified Location:</span>
+                    <span className="font-semibold shrink-0">Verified Location:</span>
                     <span className="truncate">{complaint.location_address}</span>
                   </div>
                 )}

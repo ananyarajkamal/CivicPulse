@@ -1,4 +1,5 @@
 import type { StaffComplaintDetailResponse } from "@/types/staff_complaint";
+import { useAuthStore } from "@/store/authStore";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -18,6 +19,11 @@ async function fetchWithTimeout(
       ...options,
       signal: controller.signal,
     });
+
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
+
     return response;
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
@@ -119,7 +125,8 @@ export async function updateComplaintStatusApi(
   complaintId: string,
   toStatus: string,
   notes: string | undefined,
-  accessToken: string
+  accessToken: string,
+  rejectionReason?: string
 ): Promise<StaffComplaintDetailResponse> {
   const res = await fetchWithTimeout(`${API_BASE_URL}/complaints/${complaintId}/status`, {
     method: "PATCH",
@@ -127,7 +134,11 @@ export async function updateComplaintStatusApi(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ to_status: toStatus.toLowerCase(), notes }),
+    body: JSON.stringify({
+      to_status: toStatus.toLowerCase(),
+      notes,
+      rejection_reason: rejectionReason,
+    }),
   });
 
   if (!res.ok) {
@@ -258,6 +269,92 @@ export async function submitDemoComplaintApi(
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Demo intake submission failed" }));
     throw new Error(errorData.detail || "Demo intake submission failed");
+  }
+
+  return res.json();
+}
+
+export interface IngestedSocialItem {
+  platform: string;
+  handle: string;
+  tracking_id: string;
+  title: string;
+  priority: string;
+  department: string;
+  post_url?: string;
+}
+
+export interface IngestSocialFeedResponse {
+  ingested_count: number;
+  items: IngestedSocialItem[];
+}
+
+export async function fetchRedditCivicFeedApi(
+  subreddit: string = "patna"
+): Promise<{ ingested_count: number; items: IngestedSocialItem[] }> {
+  const res = await fetchWithTimeout(
+    `${API_BASE_URL}/ingest/reddit?subreddit=${encodeURIComponent(subreddit)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Reddit ingestion failed" }));
+    throw new Error(err.detail || "Reddit ingestion failed");
+  }
+
+  return res.json();
+}
+
+export interface DeepScanResponse {
+  status: string;
+  scanned_cities: string[];
+  total_ingested: number;
+  newly_processed: number;
+  items: IngestedSocialItem[];
+  timestamp_utc: string;
+}
+
+export async function triggerDeepScanApi(): Promise<DeepScanResponse> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/ingest/deep-scan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Deep scan failed" }));
+    throw new Error(err.detail || "Deep scan failed");
+  }
+
+  return res.json();
+}
+
+export interface AgentStatusResponse {
+  agent_name: string;
+  status: string;
+  scan_frequency: string;
+  monitored_regions: string[];
+  active_categories: string[];
+  autonomous_mode: boolean;
+  server_time_utc: string;
+}
+
+export async function getAgentStatusApi(): Promise<AgentStatusResponse> {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/ingest/agent-status`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Unable to fetch agent status");
   }
 
   return res.json();

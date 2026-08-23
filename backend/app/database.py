@@ -28,7 +28,6 @@ class Base(DeclarativeBase):
     pass
 
 
-
 _settings = get_settings()
 _db_url = _settings.DATABASE_URL
 

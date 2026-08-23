@@ -62,9 +62,7 @@ class TestTrackingIdFormat:
             payload = tid[3:]
             for ch in payload:
                 assert ch in (
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "abcdefghijklmnopqrstuvwxyz"
-                    "0123456789-_"
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
                 ), f"Non-URL-safe char {ch!r} in tracking ID {tid!r}"
 
     def test_fits_in_varchar30(self) -> None:

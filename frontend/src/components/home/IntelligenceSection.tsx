@@ -33,7 +33,7 @@ export const IntelligenceSection: React.FC = () => {
         <div className="pt-4">
           <Link href="/dashboard">
             <Button variant="primary" size="lg" className="bg-[#B7A58A] text-[#161616] hover:bg-[#A89477]">
-              Explore Analytics →
+              Explore Analytics
             </Button>
           </Link>
         </div>

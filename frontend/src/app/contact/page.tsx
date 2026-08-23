@@ -43,7 +43,7 @@ export default function ContactPage() {
                 </div>
                 <Link href="/#submit-complaint">
                   <Button variant="dark" size="sm">
-                    Report Now →
+                    Report Now
                   </Button>
                 </Link>
               </div>
@@ -59,7 +59,7 @@ export default function ContactPage() {
                 </div>
                 <Link href="/#track">
                   <Button variant="outline" size="sm">
-                    Track Status →
+                    Track Status
                   </Button>
                 </Link>
               </div>
@@ -75,7 +75,7 @@ export default function ContactPage() {
                 </div>
                 <Link href="/auth/login">
                   <Button variant="outline" size="sm">
-                    Staff Login →
+                    Staff Login
                   </Button>
                 </Link>
               </div>

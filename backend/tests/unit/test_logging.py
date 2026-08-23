@@ -68,13 +68,15 @@ class TestPiiRedaction:
         assert result["service_role_key"] == "[REDACTED]"
 
     def test_safe_fields_are_not_redacted(self) -> None:
-        result = _run({
-            "event": "complaint_created",
-            "complaint_id": "CP-X7k2mN4qVpRsLwYzJb8nDg",
-            "status": "reported",
-            "department_id": "some-uuid",
-            "duration_ms": 42.5,
-        })
+        result = _run(
+            {
+                "event": "complaint_created",
+                "complaint_id": "CP-X7k2mN4qVpRsLwYzJb8nDg",
+                "status": "reported",
+                "department_id": "some-uuid",
+                "duration_ms": 42.5,
+            }
+        )
         assert result["event"] == "complaint_created"
         assert result["complaint_id"] == "CP-X7k2mN4qVpRsLwYzJb8nDg"
         assert result["status"] == "reported"
@@ -87,13 +89,15 @@ class TestPiiRedaction:
         assert result["event"] == "user_login_attempt"
 
     def test_multiple_pii_fields_all_redacted(self) -> None:
-        result = _run({
-            "event": "test",
-            "submitter_contact": "user@example.com",
-            "password": "hunter2",
-            "token": "abc",
-            "safe_field": "this is fine",
-        })
+        result = _run(
+            {
+                "event": "test",
+                "submitter_contact": "user@example.com",
+                "password": "hunter2",
+                "token": "abc",
+                "safe_field": "this is fine",
+            }
+        )
         assert result["submitter_contact"] == "[REDACTED]"
         assert result["password"] == "[REDACTED]"
         assert result["token"] == "[REDACTED]"

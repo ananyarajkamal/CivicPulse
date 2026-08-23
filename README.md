@@ -1,106 +1,70 @@
-# CivicPulse
+# 🏛️ CivicPulse — The Autonomous Smart City Complaint Resolution Platform
 
-> **AI-Powered Civic Complaint Management & City Intelligence Platform**
+> **AI-Powered Multi-Channel Civic Resolution Sentinel, Municipal Routing & City Intelligence Platform**
 
-CivicPulse converts unstructured citizen complaints into structured, prioritized, routed, and trackable municipal action items and city-level operational intelligence.
-
----
-
-## Overview
-
-CivicPulse streamlines municipal complaint operations from citizen reporting to city-wide analytics:
-
-```
-Citizen Complaint 
-  └─► AI Intelligence (Classification & Risk Detection)
-        └─► Automated Department Routing
-              └─► Proximity Duplicate Detection
-                    └─► Priority Scoring & SLA Calculation
-                          └─► Staff Resolution Workflow
-                                └─► City Intelligence Analytics
-```
+CivicPulse monitors public civic channels (Reddit, Google News, OpenStreetMap, WhatsApp, Web portals), translates unstructured complaints into prioritized municipal action items, routes them to the right departments, tracks SLAs, and provides real-time geographic intelligence for city planners.
 
 ---
 
-## Problem & Solution
+## 🎯 The Problem & The 5-Agent Solution
 
 ### The Civic Problem
-* **Fragmented Channels**: Complaints arrive via disparate channels with incomplete details.
-* **Manual Triage Bottlenecks**: Staff spend hundreds of hours manually categorizing complaints.
-* **Duplicate Submissions**: Identical infrastructure issues get logged multiple times without correlation.
-* **SLA Breaches**: High-urgency safety hazards get lost in unorganized queues.
-* **Lack of Visibility**: Municipal leadership lacks real-time insight into city-wide complaint hotspots.
+Citizens report potholes, garbage, waterlogging, and broken streetlights across fragmented social and messaging channels — but complaints get lost in bureaucracy, delayed by manual triage, or ignored.
 
-### The CivicPulse Solution
-CivicPulse provides an automated end-to-end pipeline:
-1. **Instant AI Intake**: Translates raw complaint text into categorized structured data.
-2. **Deterministic Priority & Routing**: Assigns priority scores (0–100+) and routes complaints to target departments based on rule-based keyword matching.
-3. **Proximity Duplicate Detection**: Clusters related complaints submitted within 7 days and geographic proximity.
-4. **Staff Action Dashboard**: Enables municipal officers to manage statuses, assign staff, post internal notes, and track SLAs.
-5. **City Intelligence Analytics**: Aggregates complaint volume trends, category breakdowns, and geographic hotspot clusters.
+### The 5 Autonomous AI Agents in CivicPulse
 
----
-
-## Key Features
-
-### Citizen Portal
-* **Anonymous Intake**: Citizens submit complaints without mandatory registration.
-* **Confidential Submitter Info**: Optional contact details are kept strictly internal and never exposed publicly.
-* **Address Geocoding**: Integrated Nominatim reverse-geocoding backend proxy.
-* **128-bit Cryptographic Tracking ID**: Secure tracking identifiers (`CP-{22 URL-safe chars}`) with zero sequential predictability.
-* **Public Complaint Tracker**: Allows citizens to track complaint resolution progress via `CitizenComplaintResponse` public DTO.
-
-### AI Intelligence Engine
-* **Multi-Provider Architecture**: Native support for Google Gemini (`gemini-2.5-flash`), Groq (`llama-3.3-70b-versatile`), and deterministic `MockAIProvider`.
-* **Prompt Injection Defense**: Separated system instruction boundaries preventing LLM override attacks.
-* **Structured Output Audit**: Every LLM classification is logged in `ai_processing_logs` with token usage and latency metrics.
-
-### Intelligent Processing Pipeline
-* **Deterministic Priority Formula**: Computes priority scores based on severity (1–5), safety risk bonus (+25), recurrence bonus, and category baseline.
-* **SLA Service**: Calculates resolution deadlines based on department SLA policies and flags SLA breaches automatically.
-* **Proximity Duplicate Detection**: Flags duplicates within 7 days and geographic proximity using join table relationships (`related_complaints`).
-
-### Municipal Operations Dashboard
-* **Departmental RBAC**: Staff access is strictly scoped to their assigned municipal department.
-* **Operational KPI Cards**: Real-time summary cards for Total, Unassigned, In Progress, Resolved, and SLA Breached complaints.
-* **Status Workflow**: Enforces valid state transitions (`REPORTED` → `ASSIGNED` → `IN_PROGRESS` → `RESOLVED` → `CLOSED`) with audit history logging.
-* **Officer Assignment**: Assigns complaints to active municipal officers within the same department.
-* **Internal Staff Comments**: Threaded staff-only notes, HTML-escaped for XSS security.
-
-### City Intelligence Analytics
-* **Summary Analytics**: Category, department, priority, and status distributions.
-* **SLA Compliance Tracking**: Computes city-wide and department-level SLA compliance percentages.
-* **30-Day Trend Volume**: Time-series complaint volume aggregation.
-* **Geographic Hotspots**: Aggregates complaint locations into cluster centroids without exposing submitter PII.
+```
+[Agent 1: Ingestion Sentinel]
+  ├── Monitors Reddit (r/delhi, r/bangalore, r/mumbai, r/patna, etc.)
+  ├── Scrapes Google News India Civic RSS & OpenStreetMap Infrastructure Notes
+  ├── Receives WhatsApp Cloud API & Telegram Bot Webhooks
+  └── Public Citizen Portal Intake
+        │
+        ▼
+[Agent 2: Classification Agent]
+  ├── Categorizes issue (Roads, Water, Sanitation, Electrical, Safety)
+  ├── Detects safety risks & urgency bonuses
+  └── Geotags exact coordinates & ward via OpenStreetMap Nominatim
+        │
+        ▼
+[Agent 3: Routing & Priority Agent]
+  ├── Multi-factor Priority Scoring (Low, Medium, High, Critical)
+  ├── Routes to right municipal department queue
+  └── Dynamically calculates SLA resolution deadlines (+24h to +72h)
+        │
+        ▼
+[Agent 4: Citizen Tracking Agent]
+  ├── Generates 128-bit Cryptographic Tracking ID (`CP-xxxx`)
+  ├── Real-time public status timeline (Reported → Assigned → In Progress → Resolved)
+  └── Follows up with citizens and displays resolution notes & photo proof
+        │
+        ▼
+[Agent 5: City Planner Analytics Agent]
+  ├── Proximity & DBSCAN clustering for chronic failure zones
+  ├── City-wide geospatial heatmap
+  └── Department SLA compliance and resolution velocity analytics
+```
 
 ---
 
-## Architecture
+## ✨ Key Features & Highlights
 
-| Layer | Technology Stack |
+* **100% Free & Open Intake (0 API Keys Required)**:
+  * **Reddit Sentinel**: 60-second autonomous background scanner across Indian cities (`r/delhi`, `r/bangalore`, `r/mumbai`, `r/hyderabad`, `r/patna`) with direct thread links.
+  * **Google News India Civic RSS**: Pulls breaking municipal reports with direct article links.
+  * **OpenStreetMap Civic Notes**: Ingests infrastructure bug notes with map coordinate links.
+  * **Meta WhatsApp Cloud API**: Webhook listener (`/api/v1/ingest/whatsapp`) + 1-click interactive simulator.
+* **Proximity Duplicate Detection**: Automatically links related complaints submitted within 7 days and 500m proximity.
+* **Departmental RBAC**: Scopes staff access to assigned department queues (Roads, Water, Sanitation, Lighting, Safety).
+* **Dynamic SLA Tracking**: Live breach flags and resolution countdowns.
+* **City Planner Intelligence**: Live Leaflet heatmaps, category breakdowns, and recurring hotspot analytics.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
 |---|---|
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Vanilla CSS / Tailwind CSS |
-| **Backend** | FastAPI, Python 3.11+, Pydantic v2, SQLAlchemy 2.0 (AsyncIO) |
-| **Database** | PostgreSQL with Row Level Security (RLS) policies & Alembic migrations |
-| **AI Providers** | Google Gemini API, Groq API, MockAIProvider fallback |
-| **Geocoding** | Nominatim OpenStreetMap backend proxy |
-
----
-
-## Security Architecture
-
-* **Environment Secret Isolation**: Zero API keys or database passwords committed to Git (`.env` in `.gitignore`).
-* **JWT & Refresh Tokens**: Short-lived access tokens stored in memory; httpOnly refresh token cookies.
-* **PostgreSQL RLS Policies**: Row Level Security enabled across database tables.
-* **Public vs. Staff DTO Separation**: Public tracking DTO strictly excludes 13 internal fields (PII, raw coordinates, priority score, officer identity, internal comments).
-* **PII & Secret Log Redaction**: Automated `structlog` filters masking passwords, tokens, credentials, and submitter PII in server logs.
-* **Rate Limiting**: Endpoint-level rate limiting via SlowAPI.
-
----
-
-## API Overview
-
-### Public Endpoints
 ```http
 POST /api/v1/complaints                Submit an anonymous citizen complaint
 GET  /api/v1/complaints/track/{id}     Track complaint status via 128-bit tracking ID
@@ -206,18 +170,18 @@ The database comes pre-seeded with sample municipal accounts for testing staff o
 |---|---|---|---|
 | **City Admin** | System Admin | `admin@civicpulse.gov` | `AdminPassword123!` |
 | **Municipal Officer** | Roads & Infrastructure | `officer.roads@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Water Supply & Sanitation | `officer.water@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Solid Waste Management | `officer.sanitation@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Electrical & Lighting | `officer.electricity@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Parks & Environment | `officer.parks@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Traffic & Signals | `officer.traffic@civicpulse.gov` | `OfficerPassword123!` |
-| **Municipal Officer** | Health & Public Safety | `officer.health@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Water & Sanitation | `officer.water@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Waste Management | `officer.waste@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Public Lighting | `officer.lighting@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Parks & Recreation | `officer.parks@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Public Health & Safety | `officer.safety@civicpulse.gov` | `OfficerPassword123!` |
+| **Municipal Officer** | Environmental Services | `officer.env@civicpulse.gov` | `OfficerPassword123!` |
 
 ---
 
 ## Testing & Quality Verification
 
-CivicPulse includes a complete test suite covering unit logic, API endpoints, RBAC authorization, and security hardening.
+CivicPulse includes a complete test suite covering unit logic, API endpoints, RBAC authorization, workflow state machines, and security hardening.
 
 ```bash
 # Run backend pytest suite
@@ -234,26 +198,61 @@ npm run build
 npm run lint
 ```
 
-### Verified Test Results (Phase 8 Baseline)
-* **Pytest**: `126 passed` (100% success rate)
+### Verified Test Results
+* **Pytest**: `192 passed` (100% success rate)
 * **Ruff**: `0 violations`
-* **Mypy**: `0 errors in 55 source files`
+* **Mypy**: `0 errors in 56 source files`
 * **Next.js Production Build**: `Compiled successfully`
 * **ESLint**: `0 errors, 0 warnings`
 
 ---
 
-## Future Roadmap
+## 🌐 Cloud Deployment Guide (Vercel + Render)
 
-The following features are planned for future iterations beyond Phase 8:
-* Citizen account registration & notification preferences
-* Image/evidence attachment uploads
-* Email/SMS/WhatsApp automated notification dispatch
-* Predictive ML workload forecasting
+### Architecture
+```
+┌────────────────────────────────┐         ┌─────────────────────────────────┐
+│     FRONTEND (Next.js 16)      │  HTTP   │       BACKEND (FastAPI)         │
+│       Deployed on VERCEL       │ ──────► │       Deployed on RENDER        │
+└────────────────────────────────┘         └─────────────────────────────────┘
+                                                            │
+                                                            │ AsyncIO (SQLAlchemy)
+                                                            ▼
+                                                   ┌─────────────────┐
+                                                   │   PostgreSQL    │
+                                                   │ (Supabase/Neon) │
+                                                   └─────────────────┘
+```
+
+### 1. Deploy Database (Supabase / Neon / Render PostgreSQL)
+1. Create a database on [Supabase](https://supabase.com) or [Neon](https://neon.tech).
+2. Copy your connection string: `postgresql+asyncpg://postgres:PASSWORD@HOST:5432/postgres`.
+
+### 2. Deploy Backend on Render
+1. Go to [Render](https://render.com) $\rightarrow$ **New Web Service** $\rightarrow$ Connect `CivicPulse` GitHub repo.
+2. Settings:
+   * **Root Directory**: `backend`
+   * **Runtime**: `Python 3`
+   * **Build Command**: `pip install -r requirements.txt && alembic upgrade head && python -m app.db.seed`
+   * **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. Environment Variables:
+   * `DATABASE_URL`: your PostgreSQL asyncpg URL
+   * `JWT_SECRET`: 64-character random string
+   * `ALLOWED_ORIGINS`: `https://your-app.vercel.app,http://localhost:3000`
+   * `ENVIRONMENT`: `production`
+
+### 3. Deploy Frontend on Vercel
+1. Go to [Vercel](https://vercel.com) $\rightarrow$ **Import Repository** (`CivicPulse`).
+2. Settings:
+   * **Framework Preset**: `Next.js`
+   * **Root Directory**: `frontend`
+3. Environment Variables:
+   * `NEXT_PUBLIC_API_BASE_URL`: `https://your-backend.onrender.com/api/v1`
+4. Click **Deploy**.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-Copyright (c) 2026 Ananya Raj.
+This project is licensed under the MIT License — Built for the Smart City Civic Resolution Hackathon.
+

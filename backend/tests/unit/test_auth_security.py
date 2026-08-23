@@ -56,7 +56,9 @@ class TestJwtAccessTokens:
     def test_token_with_department_id(self) -> None:
         user_id = "123e4567-e89b-12d3-a456-426614174000"
         dept_id = "987e6543-e89b-12d3-a456-426614174000"
-        token = create_access_token(user_id=user_id, role="municipal_officer", department_id=dept_id)
+        token = create_access_token(
+            user_id=user_id, role="municipal_officer", department_id=dept_id
+        )
 
         payload = decode_access_token(token)
         assert payload is not None
@@ -75,7 +77,9 @@ class TestJwtAccessTokens:
         assert payload is None
 
     def test_tampered_token_rejected(self) -> None:
-        token = create_access_token(user_id="123e4567-e89b-12d3-a456-426614174000", role="admin")
+        token = create_access_token(
+            user_id="123e4567-e89b-12d3-a456-426614174000", role="admin"
+        )
         tampered = token[:-5] + "XXXXX"
         payload = decode_access_token(tampered)
         assert payload is None

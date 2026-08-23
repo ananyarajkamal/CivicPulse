@@ -42,7 +42,7 @@ export default function DashboardOverviewPage() {
   const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummaryResponse | null>(null);
   const [analyticsTrends, setAnalyticsTrends] = useState<TrendDataPoint[]>([]);
   const [analyticsHotspots, setAnalyticsHotspots] = useState<HotspotClusterItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(accessToken));
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboardData = () => {
@@ -168,7 +168,7 @@ export default function DashboardOverviewPage() {
               </p>
             </div>
             <Button variant="dark" size="sm" onClick={loadDashboardData} className="shrink-0">
-              ↻ Retry Connection
+              Retry Connection
             </Button>
           </div>
         </Card>
@@ -185,7 +185,7 @@ export default function DashboardOverviewPage() {
           </div>
           <Link href="/dashboard/complaints">
             <Button variant="dark" size="sm">
-              View Complaints Queue →
+              View Complaints Queue
             </Button>
           </Link>
         </Card>
@@ -203,7 +203,7 @@ export default function DashboardOverviewPage() {
           </div>
           <Link href="/dashboard/intelligence">
             <Button variant="outline" size="sm">
-              {user?.role === "admin" ? "Open City Intelligence →" : "Open Department Intelligence →"}
+              {user?.role === "admin" ? "Open City Intelligence" : "Open Department Intelligence"}
             </Button>
           </Link>
         </Card>
@@ -224,7 +224,7 @@ export default function DashboardOverviewPage() {
             Recent &amp; Priority Complaints
           </h2>
           <Link href="/dashboard/complaints" className="font-sans text-xs font-semibold text-[#5D5A55] hover:text-[#161616] underline">
-            View All ({kpis?.total_complaints ?? 0}) →
+            View All ({kpis?.total_complaints ?? 0})
           </Link>
         </div>
 
@@ -275,8 +275,8 @@ export default function DashboardOverviewPage() {
                       </td>
                       <td className="p-3.5 text-right">
                         <Link href={`/dashboard/complaints/${c.id}`}>
-                          <Button variant="dark" size="sm" className="text-xs">
-                            Inspect →
+                          <Button variant="outline" size="sm" className="text-xs">
+                            Inspect
                           </Button>
                         </Link>
                       </td>
@@ -296,7 +296,7 @@ export default function DashboardOverviewPage() {
             City Intelligence Overview
           </h2>
           <Link href="/dashboard/intelligence" className="font-sans text-xs font-semibold text-[#5D5A55] hover:text-[#161616] underline">
-            Full Analytics View →
+            Full Analytics View
           </Link>
         </div>
 

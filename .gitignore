@@ -14,6 +14,7 @@
 *.key
 
 # --- Python ---
+scratch/
 __pycache__/
 *.py[cod]
 *$py.class

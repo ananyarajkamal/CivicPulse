@@ -45,9 +45,7 @@ class NotificationService:
         otherwise logs structured delivery event. Failure is caught silently.
         """
         if not cls.is_valid_email(to_email):
-            logger.info(
-                f"[NOTIFICATION] Delivery skipped: Invalid email '{to_email}'"
-            )
+            logger.info(f"[NOTIFICATION] Delivery skipped: Invalid email '{to_email}'")
             return False
 
         settings = get_settings()
@@ -82,9 +80,7 @@ class NotificationService:
                             f"[NOTIFICATION] Resend API error ({resp.status_code})"
                         )
             except Exception as exc:
-                logger.error(
-                    f"[NOTIFICATION] Email provider error: {exc}. Continuing."
-                )
+                logger.error(f"[NOTIFICATION] Email provider error: {exc}. Continuing.")
                 return False
 
         # Provider fallback / Development simulation logger
@@ -170,9 +166,7 @@ class NotificationService:
         status_label = new_status.value.replace("_", " ").upper()
 
         if new_status == ComplaintStatus.RESOLVED:
-            res_summary = (
-                resolution_notes or "Officer-reported resolution completed."
-            )
+            res_summary = resolution_notes or "Officer-reported resolution completed."
             subject = f"CivicPulse Complaint Resolved - {tracking_id}"
             body_text = (
                 f"CivicPulse Smart City Resolution Portal\n\n"
@@ -192,7 +186,7 @@ class NotificationService:
                 <tr><td style="padding: 6px; font-weight: bold;">Tracking ID:</td><td style="padding: 6px; font-family: monospace;">{tracking_id}</td></tr>
                 <tr><td style="padding: 6px; font-weight: bold;">Issue:</td><td style="padding: 6px;">{title}</td></tr>
                 <tr><td style="padding: 6px; font-weight: bold;">Department:</td><td style="padding: 6px;">{dept}</td></tr>
-                <tr><td style="padding: 6px; font-weight: bold;">Resolution Summary:</td><td style="padding: 6px;">{resolution_notes or 'Officer-reported resolution completed.'}</td></tr>
+                <tr><td style="padding: 6px; font-weight: bold;">Resolution Summary:</td><td style="padding: 6px;">{resolution_notes or "Officer-reported resolution completed."}</td></tr>
               </table>
               <p><a href="{track_url}" style="display: inline-block; background-color: #292724; color: #FBFAF7; padding: 10px 18px; text-decoration: none; border-radius: 4px;">View Resolution Record</a></p>
             </div>

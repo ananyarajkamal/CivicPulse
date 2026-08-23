@@ -11,7 +11,9 @@ real database or service during Phase 1 tests.
 import os
 
 # --- Set test environment variables before any app imports ---
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/civicpulse_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/civicpulse_test"
+)
 os.environ.setdefault("SUPABASE_URL", "https://test-project.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key-not-real")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key-not-real")

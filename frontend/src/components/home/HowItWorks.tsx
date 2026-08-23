@@ -6,28 +6,28 @@ export const HowItWorks: React.FC = () => {
   const steps = [
     {
       num: "01",
-      title: "Submit",
-      description: "Submit your complaint anonymously with issue details and location.",
+      title: "Ingestion Agent",
+      description: "Monitors and ingests citizen reports from social media, WhatsApp, and municipal portals.",
     },
     {
       num: "02",
-      title: "Understand",
-      description: "CivicPulse AI analyzes, categorizes, and scores urgency automatically.",
+      title: "Classification Agent",
+      description: "Categorizes issues, extracts geotagged locations, and detects safety hazards using LLMs.",
     },
     {
       num: "03",
-      title: "Route",
-      description: "The issue is sent to the appropriate municipal department with SLA deadline.",
+      title: "Routing Agent",
+      description: "Assigns complaints to target municipal departments with priority scoring and SLA deadlines.",
     },
     {
       num: "04",
-      title: "Act",
-      description: "Municipal officers review, assign team members, and execute repairs.",
+      title: "Tracking Agent",
+      description: "Issues 128-bit tracking IDs and updates citizens automatically throughout resolution.",
     },
     {
       num: "05",
-      title: "Resolve",
-      description: "Citizens track real-time progress until the issue is verified and closed.",
+      title: "Analytics Agent",
+      description: "Identifies recurring geographic problem areas and SLA metrics for city planners.",
     },
   ];
 
@@ -35,9 +35,9 @@ export const HowItWorks: React.FC = () => {
     <section id="how-it-works" className="py-16 sm:py-24 bg-[#F5F1E8] border-b border-[#D6CFC3]">
       <Container>
         <SectionHeading
-          eyebrow="TRANSPARENT PROCESS"
-          title="How It Works"
-          subtitle="Simple steps to raise and resolve issues in your city."
+          eyebrow="MULTI-AGENT AI ARCHITECTURE"
+          title="Autonomous Resolution Pipeline"
+          subtitle="Five specialized AI agents working together from multi-channel intake to city intelligence."
           align="center"
         />
 

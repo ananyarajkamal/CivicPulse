@@ -61,7 +61,7 @@ export default function PrivacyPage() {
             <div className="pt-4 text-center">
               <Link href="/#submit-complaint">
                 <Button variant="dark" size="md">
-                  Report an Issue →
+                  Report an Issue
                 </Button>
               </Link>
             </div>

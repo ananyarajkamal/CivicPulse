@@ -43,10 +43,12 @@ if alembic_config.config_file_name is not None:
 database_url = os.environ.get("DATABASE_URL")
 if not database_url:
     from app.config import get_settings
+
     database_url = get_settings().DATABASE_URL
 
 if database_url:
     import re
+
     m_pwd = re.match(
         r"^(postgresql(?:\+asyncpg)?://[^:]+:)(\[[^\]]+\])(@.+)$", database_url
     )
@@ -91,7 +93,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        compare_type=True,        # Detect column type changes
+        compare_type=True,  # Detect column type changes
         compare_server_default=True,  # Detect default value changes
     )
     with context.begin_transaction():

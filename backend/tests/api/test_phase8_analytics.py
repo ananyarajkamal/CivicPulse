@@ -50,6 +50,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -66,7 +67,9 @@ async def client(setup_db: AsyncSession) -> AsyncClient:
 async def seed_analytics_data(setup_db: AsyncSession) -> dict:
     """Seed test departments, categories, officers, and complaints."""
     d1 = Department(name="Roads Department", code="ROADS", default_sla_hours=48)
-    d2 = Department(name="Sanitation Department", code="SANITATION", default_sla_hours=24)
+    d2 = Department(
+        name="Sanitation Department", code="SANITATION", default_sla_hours=24
+    )
     setup_db.add_all([d1, d2])
     await setup_db.flush()
 
@@ -124,7 +127,9 @@ async def seed_analytics_data(setup_db: AsyncSession) -> dict:
     await setup_db.commit()
 
     officer1_token = create_access_token(
-        user_id=officer1.id, role=officer1.role.value, department_id=officer1.department_id
+        user_id=officer1.id,
+        role=officer1.role.value,
+        department_id=officer1.department_id,
     )
     admin_token = create_access_token(user_id=admin.id, role=admin.role.value)
 
@@ -139,11 +144,15 @@ async def seed_analytics_data(setup_db: AsyncSession) -> dict:
 class TestAnalyticsEndpoints:
     """Test cases for Phase 8 Analytics API."""
 
-    async def test_unauthenticated_analytics_returns_401(self, client: AsyncClient) -> None:
+    async def test_unauthenticated_analytics_returns_401(
+        self, client: AsyncClient
+    ) -> None:
         res = await client.get("/api/v1/analytics/summary")
         assert res.status_code == 401
 
-    async def test_admin_gets_global_summary(self, client: AsyncClient, seed_analytics_data: dict) -> None:
+    async def test_admin_gets_global_summary(
+        self, client: AsyncClient, seed_analytics_data: dict
+    ) -> None:
         token = seed_analytics_data["admin_token"]
         res = await client.get(
             "/api/v1/analytics/summary",
@@ -154,7 +163,9 @@ class TestAnalyticsEndpoints:
         assert data["total_complaints"] == 2
         assert len(data["departments"]) == 2
 
-    async def test_officer_gets_scoped_summary(self, client: AsyncClient, seed_analytics_data: dict) -> None:
+    async def test_officer_gets_scoped_summary(
+        self, client: AsyncClient, seed_analytics_data: dict
+    ) -> None:
         token = seed_analytics_data["officer1_token"]
         res = await client.get(
             "/api/v1/analytics/summary",
@@ -166,7 +177,9 @@ class TestAnalyticsEndpoints:
         assert len(data["departments"]) == 1
         assert data["departments"][0]["department_name"] == "Roads Department"
 
-    async def test_analytics_trends(self, client: AsyncClient, seed_analytics_data: dict) -> None:
+    async def test_analytics_trends(
+        self, client: AsyncClient, seed_analytics_data: dict
+    ) -> None:
         token = seed_analytics_data["admin_token"]
         res = await client.get(
             "/api/v1/analytics/trends?days=30",
@@ -177,7 +190,9 @@ class TestAnalyticsEndpoints:
         assert isinstance(trends, list)
         assert len(trends) >= 1
 
-    async def test_analytics_hotspots(self, client: AsyncClient, seed_analytics_data: dict) -> None:
+    async def test_analytics_hotspots(
+        self, client: AsyncClient, seed_analytics_data: dict
+    ) -> None:
         token = seed_analytics_data["admin_token"]
         res = await client.get(
             "/api/v1/analytics/hotspots",

@@ -256,8 +256,7 @@ async def submit_complaint(
     status_code=status.HTTP_201_CREATED,
     summary="Submit demo channel complaint (Staff/Admin only)",
     description=(
-        "Simulate multi-channel intake for demonstration "
-        "(WhatsApp, Social, Municipal)."
+        "Simulate multi-channel intake for demonstration (WhatsApp, Social, Municipal)."
     ),
 )
 async def submit_demo_complaint(
@@ -464,11 +463,7 @@ async def get_kpi_summary(
         for c in complaints
         if c.status in (ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED)
     )
-    breached = sum(
-        1
-        for c in complaints
-        if SLAService.is_breached(c)
-    )
+    breached = sum(1 for c in complaints if SLAService.is_breached(c))
 
     return KPIResponse(
         total_complaints=total,
@@ -645,9 +640,7 @@ async def get_staff_complaint_detail(
     lat = float(complaint.location_lat) if complaint.location_lat is not None else None
     lng = float(complaint.location_lng) if complaint.location_lng is not None else None
     conf = (
-        float(complaint.ai_confidence)
-        if complaint.ai_confidence is not None
-        else None
+        float(complaint.ai_confidence) if complaint.ai_confidence is not None else None
     )
 
     return StaffComplaintDetailResponse(
@@ -702,9 +695,7 @@ async def get_related_complaints(
       - Admins can view related complaints for any complaint.
       - Officers can view related complaints only for their department.
     """
-    res = await db.execute(
-        select(Complaint).where(Complaint.id == complaint_id)
-    )
+    res = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = res.scalar_one_or_none()
 
     if not complaint:
@@ -810,7 +801,7 @@ async def update_complaint_status(
             ComplaintStatus.CLOSED,
         },
         ComplaintStatus.RESOLVED: {ComplaintStatus.CLOSED},
-        ComplaintStatus.REJECTED: set(),
+        ComplaintStatus.REJECTED: {ComplaintStatus.REPORTED},
         ComplaintStatus.CLOSED: set(),
     }
 
@@ -824,19 +815,60 @@ async def update_complaint_status(
         )
 
     old_status = complaint.status
-    complaint.status = payload.to_status
     now = datetime.now(tz=UTC)
-    complaint.updated_at = now
+    raw_notes = (
+        payload.notes.strip() if payload.notes and payload.notes.strip() else None
+    )
+    formatted_notes: str | None = raw_notes
 
-    if payload.to_status in (
-        ComplaintStatus.RESOLVED,
-        ComplaintStatus.CLOSED,
-        ComplaintStatus.REJECTED,
+    # Validation and formatting by target status / transition
+    if payload.to_status == ComplaintStatus.REJECTED:
+        reason_str = (
+            payload.rejection_reason.strip()
+            if payload.rejection_reason and payload.rejection_reason.strip()
+            else (raw_notes or "").strip()
+        )
+        if not reason_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A rejection reason is required when rejecting a complaint.",
+            )
+        valid_reasons = [
+            "Duplicate Complaint",
+            "Outside Municipal Jurisdiction",
+            "Insufficient Information",
+            "Invalid / Spam Report",
+            "Issue Already Resolved",
+            "Unable to Verify",
+            "Other",
+        ]
+        # Match standard reason or treat as Other/Custom
+        matched_reason = reason_str if reason_str in valid_reasons else "Other"
+        note_suffix = f": {raw_notes}" if raw_notes and raw_notes != reason_str else ""
+        formatted_notes = f"Rejection Reason: {matched_reason}{note_suffix}"
+        if not complaint.resolved_at:
+            complaint.resolved_at = now
+        complaint.resolution_notes = html.escape(formatted_notes)
+
+    elif (
+        old_status == ComplaintStatus.REJECTED
+        and payload.to_status == ComplaintStatus.REPORTED
     ):
-        if payload.to_status in (
-            ComplaintStatus.RESOLVED,
-            ComplaintStatus.CLOSED,
-        ) and (not payload.notes or not payload.notes.strip()):
+        if not raw_notes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "A reason for reopening is required when reopening a "
+                    "rejected complaint."
+                ),
+            )
+        formatted_notes = f"Reopened Reason: {raw_notes}"
+        complaint.resolution_notes = html.escape(formatted_notes)
+        complaint.assigned_to = None  # Re-enter as unassigned REPORTED complaint
+        complaint.resolved_at = None
+
+    elif payload.to_status in (ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED):
+        if not raw_notes:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -846,11 +878,13 @@ async def update_complaint_status(
             )
         if not complaint.resolved_at:
             complaint.resolved_at = now
-        if payload.notes:
-            complaint.resolution_notes = html.escape(payload.notes.strip())
-    elif payload.notes:
-        complaint.resolution_notes = html.escape(payload.notes.strip())
+        complaint.resolution_notes = html.escape(raw_notes)
 
+    elif raw_notes:
+        complaint.resolution_notes = html.escape(raw_notes)
+
+    complaint.status = payload.to_status
+    complaint.updated_at = now
     complaint.sla_breached = SLAService.is_breached(complaint, now=now)
 
     history_entry = ComplaintStatusHistory(
@@ -858,7 +892,7 @@ async def update_complaint_status(
         from_status=old_status,
         to_status=payload.to_status,
         changed_by=current_user.id,
-        notes=html.escape(payload.notes.strip()) if payload.notes else None,
+        notes=html.escape(formatted_notes) if formatted_notes else None,
         created_at=now,
     )
     db.add(history_entry)
@@ -903,9 +937,7 @@ async def assign_complaint_officer(
     """
     Staff-only endpoint: Assign complaint to an active officer within department.
     """
-    res = await db.execute(
-        select(Complaint).where(Complaint.id == complaint_id)
-    )
+    res = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = res.scalar_one_or_none()
 
     if not complaint:
@@ -923,9 +955,16 @@ async def assign_complaint_officer(
             detail="Access denied: complaint belongs to another department.",
         )
 
-    officer_res = await db.execute(
-        select(User).where(User.id == payload.officer_id)
-    )
+    if complaint.status in (ComplaintStatus.REJECTED, ComplaintStatus.CLOSED):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Cannot assign an officer to a {complaint.status.value.lower()} "
+                "complaint. Reopen the complaint first."
+            ),
+        )
+
+    officer_res = await db.execute(select(User).where(User.id == payload.officer_id))
     target_officer = officer_res.scalar_one_or_none()
 
     if not target_officer or not target_officer.is_active:
@@ -981,9 +1020,7 @@ async def add_internal_comment(
     """
     Staff-only endpoint: Post an internal staff comment on a complaint.
     """
-    res = await db.execute(
-        select(Complaint).where(Complaint.id == complaint_id)
-    )
+    res = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = res.scalar_one_or_none()
 
     if not complaint:
@@ -1039,9 +1076,7 @@ async def get_internal_comments(
     """
     Staff-only endpoint: Retrieve internal staff comments for a complaint.
     """
-    res = await db.execute(
-        select(Complaint).where(Complaint.id == complaint_id)
-    )
+    res = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
     complaint = res.scalar_one_or_none()
 
     if not complaint:

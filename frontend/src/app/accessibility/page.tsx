@@ -52,7 +52,7 @@ export default function AccessibilityPage() {
             <div className="pt-4 text-center">
               <Link href="/#track">
                 <Button variant="dark" size="md">
-                  Track Your Complaint →
+                  Track Your Complaint
                 </Button>
               </Link>
             </div>

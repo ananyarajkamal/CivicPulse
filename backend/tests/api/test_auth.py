@@ -47,6 +47,7 @@ async def setup_db() -> AsyncSession:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden to use in-memory SQLite."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -82,7 +83,10 @@ class TestLoginEndpoint:
     async def test_login_success(self, client: AsyncClient, seed_user: User) -> None:
         response = await client.post(
             "/api/v1/auth/login",
-            json={"email": "testofficer@civicpulse.gov", "password": "ValidPassword123!"},
+            json={
+                "email": "testofficer@civicpulse.gov",
+                "password": "ValidPassword123!",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -91,7 +95,9 @@ class TestLoginEndpoint:
         assert data["expires_in"] == 900
         assert "refresh_token" in response.cookies
 
-    async def test_login_invalid_password(self, client: AsyncClient, seed_user: User) -> None:
+    async def test_login_invalid_password(
+        self, client: AsyncClient, seed_user: User
+    ) -> None:
         response = await client.post(
             "/api/v1/auth/login",
             json={"email": "testofficer@civicpulse.gov", "password": "WrongPassword!"},
@@ -99,7 +105,9 @@ class TestLoginEndpoint:
         assert response.status_code == 401
         assert "Invalid email or password" in response.json()["detail"]
 
-    async def test_login_nonexistent_email(self, client: AsyncClient, setup_db: AsyncSession) -> None:
+    async def test_login_nonexistent_email(
+        self, client: AsyncClient, setup_db: AsyncSession
+    ) -> None:
         response = await client.post(
             "/api/v1/auth/login",
             json={"email": "nobody@civicpulse.gov", "password": "Password123!"},
@@ -110,8 +118,12 @@ class TestLoginEndpoint:
 class TestMeEndpoint:
     """Tests for GET /api/v1/auth/me."""
 
-    async def test_get_me_authenticated(self, client: AsyncClient, seed_user: User) -> None:
-        token = create_access_token(user_id=str(seed_user.id), role=seed_user.role.value)
+    async def test_get_me_authenticated(
+        self, client: AsyncClient, seed_user: User
+    ) -> None:
+        token = create_access_token(
+            user_id=str(seed_user.id), role=seed_user.role.value
+        )
         response = await client.get(
             "/api/v1/auth/me",
             headers={"Authorization": f"Bearer {token}"},
@@ -143,7 +155,10 @@ class TestRefreshAndLogout:
         # 1. Login
         login_res = await client.post(
             "/api/v1/auth/login",
-            json={"email": "testofficer@civicpulse.gov", "password": "ValidPassword123!"},
+            json={
+                "email": "testofficer@civicpulse.gov",
+                "password": "ValidPassword123!",
+            },
         )
         assert login_res.status_code == 200
         refresh_cookie = login_res.cookies.get("refresh_token")

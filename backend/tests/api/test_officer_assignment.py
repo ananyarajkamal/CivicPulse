@@ -37,6 +37,7 @@ async def setup_db() -> AsyncSession:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -50,7 +51,9 @@ async def client(setup_db: AsyncSession) -> AsyncClient:
 
 
 @pytest.fixture
-async def seed_data(setup_db: AsyncSession) -> dict[str, str | User | Department | Complaint]:
+async def seed_data(
+    setup_db: AsyncSession,
+) -> dict[str, str | User | Department | Complaint]:
     """Seed test department, officers, and complaint."""
     dept = Department(
         name="Roads & Infrastructure",

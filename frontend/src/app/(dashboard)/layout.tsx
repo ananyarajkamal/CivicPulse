@@ -56,7 +56,7 @@ export default function DashboardLayout({
     };
   }, [isAuthenticated, setAuth, clearAuth, router]);
 
-  // Route guard: Non-admin users cannot access Channel Simulator (/dashboard/demo-intake)
+  // Route guard: Non-admin users cannot access Ingestion Control Room (/dashboard/demo-intake)
   useEffect(() => {
     if (!isHydrating && isAuthenticated && user) {
       if (user.role !== "admin" && pathname.startsWith("/dashboard/demo-intake")) {
@@ -108,9 +108,9 @@ export default function DashboardLayout({
           ],
         },
         {
-          sectionTitle: "SYSTEM TOOLS",
+          sectionTitle: "AI INGESTION & TOOLS",
           items: [
-            { name: "Channel Integration Simulator", href: "/dashboard/demo-intake" },
+            { name: "Live Reddit Ingestion Agent", href: "/dashboard/demo-intake" },
           ],
         },
         {

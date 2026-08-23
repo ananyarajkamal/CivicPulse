@@ -46,3 +46,7 @@ class HotspotClusterItem(BaseModel):
     longitude: float
     complaint_count: int
     primary_category: str | None = None
+    department_name: str | None = None
+    open_cases: int = 0
+    resolved_cases: int = 0
+    highest_priority: str | None = None

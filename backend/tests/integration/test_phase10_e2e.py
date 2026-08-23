@@ -7,7 +7,6 @@ Validates complete civic lifecycle:
     Internal Staff Comments -> Citizen Tracking Reflection (RESOLVED) -> KPI Updates
 """
 
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -53,6 +52,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 

@@ -45,6 +45,7 @@ async def setup_db() -> AsyncSession:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -58,7 +59,9 @@ async def client(setup_db: AsyncSession) -> AsyncClient:
 
 
 @pytest.fixture
-async def seed_department_and_category(setup_db: AsyncSession) -> tuple[Department, ComplaintCategory]:
+async def seed_department_and_category(
+    setup_db: AsyncSession,
+) -> tuple[Department, ComplaintCategory]:
     """Seed sample department and category into test DB."""
     dept = Department(
         name="Roads & Infrastructure",
@@ -86,7 +89,9 @@ class TestPublicLists:
     """Tests for GET /departments and GET /categories."""
 
     async def test_list_departments(
-        self, client: AsyncClient, seed_department_and_category: tuple[Department, ComplaintCategory]
+        self,
+        client: AsyncClient,
+        seed_department_and_category: tuple[Department, ComplaintCategory],
     ) -> None:
         response = await client.get("/api/v1/departments")
         assert response.status_code == 200
@@ -95,7 +100,9 @@ class TestPublicLists:
         assert data[0]["code"] == "ROADS"
 
     async def test_list_categories(
-        self, client: AsyncClient, seed_department_and_category: tuple[Department, ComplaintCategory]
+        self,
+        client: AsyncClient,
+        seed_department_and_category: tuple[Department, ComplaintCategory],
     ) -> None:
         response = await client.get("/api/v1/categories")
         assert response.status_code == 200
@@ -107,7 +114,9 @@ class TestPublicLists:
 class TestComplaintSubmission:
     """Tests for POST /api/v1/complaints."""
 
-    async def test_submit_anonymous_complaint_minimal(self, client: AsyncClient) -> None:
+    async def test_submit_anonymous_complaint_minimal(
+        self, client: AsyncClient
+    ) -> None:
         response = await client.post(
             "/api/v1/complaints",
             json={"raw_text": "There is a deep hazardous pothole near 5th avenue."},
@@ -120,7 +129,9 @@ class TestComplaintSubmission:
         assert data["status"] == "reported"
 
     async def test_submit_anonymous_complaint_full(
-        self, client: AsyncClient, seed_department_and_category: tuple[Department, ComplaintCategory]
+        self,
+        client: AsyncClient,
+        seed_department_and_category: tuple[Department, ComplaintCategory],
     ) -> None:
         dept, cat = seed_department_and_category
         payload = {
@@ -139,7 +150,9 @@ class TestComplaintSubmission:
         data = response.json()
         assert validate_tracking_id(data["tracking_id"]) is True
 
-    async def test_submit_complaint_short_text_rejected(self, client: AsyncClient) -> None:
+    async def test_submit_complaint_short_text_rejected(
+        self, client: AsyncClient
+    ) -> None:
         response = await client.post(
             "/api/v1/complaints",
             json={"raw_text": "too short"},  # < 10 chars
@@ -182,7 +195,9 @@ class TestComplaintTracking:
         response = await client.get("/api/v1/complaints/track/INVALID-TRACKING-ID")
         assert response.status_code == 404
 
-    async def test_track_nonexistent_valid_format_returns_404(self, client: AsyncClient) -> None:
+    async def test_track_nonexistent_valid_format_returns_404(
+        self, client: AsyncClient
+    ) -> None:
         # Nonexistent 128-bit tracking ID
         fake_id = "CP-X7k2mN4qVpRsLwYzJb8nDg"
         response = await client.get(f"/api/v1/complaints/track/{fake_id}")

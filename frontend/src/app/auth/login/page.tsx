@@ -99,7 +99,7 @@ export default function StaffLoginPage() {
 
         <div className="relative z-10 pt-8 font-sans text-xs text-[#D6CFC3]/80 flex items-center justify-between border-t border-[#5D5A55]/40">
           <Link href="/" className="hover:text-[#FBFAF7] transition-colors">
-            ← Return to Public Portal
+            Return to Public Portal
           </Link>
           <span>CivicPulse Platform</span>
         </div>
@@ -169,7 +169,7 @@ export default function StaffLoginPage() {
               disabled={loading}
               className="w-full justify-center shadow-civic"
             >
-              {loading ? "Authenticating..." : "Sign In to Operations →"}
+              {loading ? "Authenticating..." : "Sign In to Operations"}
             </Button>
           </form>
 

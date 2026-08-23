@@ -52,6 +52,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -124,11 +125,11 @@ async def seed_data(setup_db: AsyncSession) -> dict:
     await setup_db.commit()
 
     officer1_token = create_access_token(
-        user_id=officer1.id, role=officer1.role.value, department_id=officer1.department_id
+        user_id=officer1.id,
+        role=officer1.role.value,
+        department_id=officer1.department_id,
     )
-    admin_token = create_access_token(
-        user_id=admin.id, role=admin.role.value
-    )
+    admin_token = create_access_token(user_id=admin.id, role=admin.role.value)
 
     return {
         "d1": d1,

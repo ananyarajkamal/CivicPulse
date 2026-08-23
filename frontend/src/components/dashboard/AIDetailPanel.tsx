@@ -60,7 +60,7 @@ export default function AIDetailPanel({
         </div>
 
         {complaint.is_safety_risk && (
-          <Badge variant="critical">⚠️ Safety Risk Flagged</Badge>
+          <Badge variant="critical">Safety Risk Flagged</Badge>
         )}
       </div>
 
@@ -96,7 +96,7 @@ export default function AIDetailPanel({
             <span className="font-semibold text-[#5D5A55] uppercase tracking-wider text-[10px] block">
               Severity &amp; Priority
             </span>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
               <span className="font-serif-civic font-bold text-base text-[#161616]">
                 {capitalize(complaint.priority)}
               </span>
@@ -106,6 +106,7 @@ export default function AIDetailPanel({
                     ? (complaint.priority.toLowerCase() as "critical" | "high" | "medium" | "low")
                     : "neutral"
                 }
+                className="w-fit"
               >
                 {complaint.priority_score ?? 0} / 100
               </Badge>
@@ -147,7 +148,7 @@ export default function AIDetailPanel({
               Safety Risk
             </span>
             <span className="font-bold text-[#161616] text-sm block">
-              {complaint.is_safety_risk ? "Yes — Immediate Risk Flagged" : "No"}
+              {complaint.is_safety_risk ? "Yes: Immediate Risk Flagged" : "No"}
             </span>
           </div>
         </div>
@@ -161,7 +162,7 @@ export default function AIDetailPanel({
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {locationMentions.map((loc, i) => (
                 <Badge key={i} variant="neutral" className="text-[10px]">
-                  📍 {loc}
+                  {loc}
                 </Badge>
               ))}
             </div>
@@ -177,7 +178,7 @@ export default function AIDetailPanel({
             onClick={() => setShowRawJson(!showRawJson)}
             className="font-sans text-xs font-semibold text-[#161616] hover:text-[#5D5A55] flex items-center gap-1.5 cursor-pointer"
           >
-            <span>{showRawJson ? "▼ Hide" : "▶ View"} Advanced AI Output (Admin Debug)</span>
+            <span>{showRawJson ? "Hide" : "View"} Advanced AI Output (Admin Debug)</span>
           </button>
 
           {showRawJson && (
@@ -188,11 +189,11 @@ export default function AIDetailPanel({
         </div>
       )}
 
-      {/* AI Execution Logs Table */}
-      {complaint.ai_logs.length > 0 && (
+      {/* AI Execution Logs Table (Restricted strictly to Admin Users for System Diagnostics) */}
+      {isAdmin && complaint.ai_logs.length > 0 && (
         <div className="space-y-3 pt-2 border-t border-[#D6CFC3]">
           <h4 className="font-sans text-xs font-semibold uppercase tracking-wider text-[#161616]">
-            AI Agent Execution Logs ({complaint.ai_logs.length})
+            System Diagnostics: AI Agent Execution Logs ({complaint.ai_logs.length})
           </h4>
           <div className="border border-[#D6CFC3] rounded-sm overflow-hidden bg-[#FBFAF7]">
             <table className="w-full text-left border-collapse text-xs">

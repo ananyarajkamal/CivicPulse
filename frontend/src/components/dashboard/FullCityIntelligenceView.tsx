@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type {
   AnalyticsSummaryResponse,
   HotspotClusterItem,
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SimpleLineChart } from "@/components/ui/Chart";
 import { AnalyticsIcon, HotspotIcon, CityIcon, ClockIcon } from "@/components/ui/Icons";
 import { HotspotMap } from "@/components/dashboard/HotspotMap";
+import Link from "next/link";
 
 interface FullCityIntelligenceViewProps {
   summary: AnalyticsSummaryResponse | null;
@@ -23,6 +24,8 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
   trends,
   hotspots,
 }) => {
+  const [selectedHotspot, setSelectedHotspot] = useState<HotspotClusterItem | null>(null);
+
   if (!summary) {
     return (
       <Card variant="primary" padding="lg" className="text-center py-12 shadow-civic border-[#D6CFC3]">
@@ -45,6 +48,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
   const slaPercentage = formatSlaRate(summary.sla_compliance_rate);
   const totalCategoryComplaints = summary.categories.reduce((acc, cat) => acc + cat.count, 0);
 
+  // Active Hotspots are strictly recurring complaint areas (count >= 2)
   const recurringHotspots = hotspots.filter((h) => h.complaint_count >= 2);
   const activeCasesCount = summary.statuses
     .filter((s) => !["resolved", "closed", "rejected"].includes(s.status.toLowerCase()))
@@ -55,7 +59,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
       {/* Header */}
       <div className="border-b border-[#D6CFC3] pb-6 space-y-2">
         <span className="font-sans text-xs font-semibold tracking-widest uppercase text-[#5D5A55]">
-          CITY OPERATIONAL INTELLIGENCE
+          MUNICIPAL OPERATIONAL INTELLIGENCE
         </span>
         <h1 className="font-serif-civic text-3xl sm:text-4xl lg:text-5xl font-bold text-[#161616] tracking-tight">
           Understand the City Behind the Complaints.
@@ -96,7 +100,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
 
         <Card variant="primary" padding="md" className="border-[#D6CFC3] shadow-civic space-y-1">
           <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#5D5A55]">
-            Recurring Hotspots
+            Active Hotspots (2+ Reports)
           </span>
           <div className="font-serif-civic text-3xl sm:text-4xl font-bold text-[#161616]">
             {recurringHotspots.length}
@@ -106,7 +110,7 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
 
       {/* Geographic Complaint Hotspots Map Section */}
       <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-4">
-        <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D6CFC3] pb-3">
           <div className="flex items-center gap-2">
             <HotspotIcon className="w-5 h-5 text-[#292724]" />
             <div>
@@ -114,47 +118,147 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
                 Geographic Complaint Hotspots
               </h3>
               <p className="font-sans text-xs text-[#5D5A55]">
-                Spatial distribution and recurring complaint concentrations across Patna
+                Areas with recurring civic reports that may indicate systemic infrastructure or service issues.
               </p>
             </div>
           </div>
           <Badge variant={recurringHotspots.length > 0 ? "critical" : "neutral"}>
             {recurringHotspots.length > 0
               ? `${recurringHotspots.length} Active Hotspot Clusters`
-              : "No Active Clusters"}
+              : "No Active Hotspot Clusters"}
           </Badge>
         </div>
 
         {/* Interactive Leaflet Map */}
-        <HotspotMap hotspots={hotspots} />
+        <HotspotMap hotspots={hotspots} onSelectHotspot={setSelectedHotspot} />
+
+        {/* Selected Hotspot Detail Banner */}
+        {selectedHotspot && (
+          <div className="p-4 bg-[#FBFAF7] border border-[#B7A58A] rounded-sm flex flex-wrap items-center justify-between gap-4 font-sans text-xs">
+            <div className="space-y-1">
+              <span className="font-semibold text-[#5D5A55] uppercase tracking-wider text-[10px] block">
+                Selected Geographic Location
+              </span>
+              <h4 className="font-serif-civic text-lg font-bold text-[#161616]">
+                {selectedHotspot.location_name}
+              </h4>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#5D5A55]">
+                <span>Category: <strong className="text-[#161616]">{selectedHotspot.primary_category || "Uncategorized"}</strong></span>
+                {selectedHotspot.department_name && (
+                  <span>Dept: <strong className="text-[#161616]">{selectedHotspot.department_name}</strong></span>
+                )}
+                <span>Priority: <strong className="text-[#161616]">{selectedHotspot.highest_priority || "Medium"}</strong></span>
+                {typeof selectedHotspot.open_cases === "number" && (
+                  <span>Status: <strong className="text-[#161616]">{selectedHotspot.open_cases} Open / {selectedHotspot.resolved_cases || 0} Resolved</strong></span>
+                )}
+              </div>
+            </div>
+            <Link
+              href={`/dashboard/complaints?q=${encodeURIComponent(selectedHotspot.location_name)}`}
+              className="py-1.5 px-3 bg-[#292724] text-[#FBFAF7] font-semibold rounded-xs hover:bg-[#161616] transition-colors shrink-0"
+            >
+              View Related Complaints
+            </Link>
+          </div>
+        )}
       </Card>
 
-      {/* Complaint Volume Trend */}
+      {/* Accessible Hotspot Breakdown Table */}
       <Card variant="primary" padding="lg" className="border-[#D6CFC3] shadow-civic space-y-4">
-        <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
-          <div className="flex items-center gap-2">
-            <AnalyticsIcon className="w-5 h-5 text-[#292724]" />
-            <div>
-              <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
-                Complaint Activity Trend
-              </h3>
-              <p className="font-sans text-xs text-[#5D5A55]">
-                Reported civic issues over the recent observation period
-              </p>
-            </div>
+        <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
+          <HotspotIcon className="w-5 h-5 text-[#292724]" />
+          <div>
+            <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
+              Geographic Concentration Index
+            </h3>
+            <p className="font-sans text-xs text-[#5D5A55]">
+              Accessible tabular overview of mapped complaint locations and recurring clusters
+            </p>
           </div>
-          <Badge variant="neutral">
-            {trends.length === 1 ? "Last 1 Day Timeline" : `Last ${trends.length} Days Timeline`}
-          </Badge>
         </div>
 
-        <SimpleLineChart data={trends} height={260} />
+        {hotspots.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-sans text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#D6CFC3] text-[#5D5A55] font-semibold uppercase tracking-wider text-[10px]">
+                  <th className="py-2.5 px-3">Location</th>
+                  <th className="py-2.5 px-3">Cluster Type</th>
+                  <th className="py-2.5 px-3">Primary Category</th>
+                  <th className="py-2.5 px-3">Department</th>
+                  <th className="py-2.5 px-3 text-center">Cases (Open / Done)</th>
+                  <th className="py-2.5 px-3 text-right">Total Reports</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EAE4DA]">
+                {hotspots.map((hs) => {
+                  const isRecurring = hs.complaint_count >= 2;
+                  return (
+                    <tr key={hs.id} className="hover:bg-[#FBFAF7]/80 transition-colors">
+                      <td className="py-3 px-3 font-semibold text-[#161616] max-w-[220px] truncate">
+                        {hs.location_name}
+                      </td>
+                      <td className="py-3 px-3">
+                        <Badge variant={isRecurring ? "critical" : "neutral"}>
+                          {isRecurring ? "Hotspot Cluster" : "Single Issue"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3 text-[#5D5A55]">{hs.primary_category || "Uncategorized"}</td>
+                      <td className="py-3 px-3 text-[#5D5A55]">{hs.department_name || "Unassigned"}</td>
+                      <td className="py-3 px-3 text-center text-[#5D5A55]">
+                        {hs.open_cases || 0} Open / {hs.resolved_cases || 0} Done
+                      </td>
+                      <td className="py-3 px-3 text-right font-serif-civic font-bold text-sm text-[#161616]">
+                        {hs.complaint_count}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <Link
+                          href={`/dashboard/complaints?q=${encodeURIComponent(hs.location_name)}`}
+                          className="text-[#292724] hover:text-[#161616] underline font-medium text-[11px]"
+                        >
+                          View Queue
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="font-sans text-xs text-[#5D5A55] italic py-4">
+            No recurring geographic hotspots detected. Hotspots appear when multiple complaints are reported around the same area.
+          </p>
+        )}
       </Card>
 
-      {/* Category & SLA Breakdown Grid */}
+      {/* Activity Trend & Category Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Category Distribution */}
+        {/* Complaint Activity Trend */}
         <Card variant="primary" padding="lg" className="lg:col-span-7 border-[#D6CFC3] shadow-civic space-y-4">
+          <div className="flex items-center justify-between border-b border-[#D6CFC3] pb-3">
+            <div className="flex items-center gap-2">
+              <AnalyticsIcon className="w-5 h-5 text-[#292724]" />
+              <div>
+                <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
+                  Complaint Activity Trend
+                </h3>
+                <p className="font-sans text-xs text-[#5D5A55]">
+                  Reported civic issues over the recent observation period
+                </p>
+              </div>
+            </div>
+            <Badge variant="neutral">
+              {trends.length === 1 ? "Last 1 Day Timeline" : `Last ${trends.length} Days Timeline`}
+            </Badge>
+          </div>
+
+          <SimpleLineChart data={trends} height={260} />
+        </Card>
+
+        {/* Category Distribution */}
+        <Card variant="primary" padding="lg" className="lg:col-span-5 border-[#D6CFC3] shadow-civic space-y-4">
           <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
             <CityIcon className="w-5 h-5 text-[#292724]" />
             <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
@@ -179,9 +283,12 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
             })}
           </div>
         </Card>
+      </div>
 
+      {/* SLA Performance & Derived Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* SLA Performance Card */}
-        <Card variant="primary" padding="lg" className="lg:col-span-5 border-[#D6CFC3] shadow-civic space-y-6">
+        <Card variant="primary" padding="lg" className="lg:col-span-6 border-[#D6CFC3] shadow-civic space-y-6">
           <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
             <ClockIcon className="w-5 h-5 text-[#292724]" />
             <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
@@ -214,57 +321,14 @@ export const FullCityIntelligenceView: React.FC<FullCityIntelligenceViewProps> =
             </div>
           </div>
         </Card>
-      </div>
 
-      {/* Hotspots & What The Data Shows */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Hotspots List */}
-        <Card variant="primary" padding="lg" className="lg:col-span-7 border-[#D6CFC3] shadow-civic space-y-4">
-          <div className="flex items-center gap-2 border-b border-[#D6CFC3] pb-3">
-            <HotspotIcon className="w-5 h-5 text-[#292724]" />
-            <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
-              Geographic Activity &amp; Hotspots ({formatPlural(hotspots.length, "location", "locations")})
-            </h3>
-          </div>
-
-          {hotspots.length > 0 ? (
-            <div className="space-y-3">
-              {hotspots.map((hs) => (
-                <div
-                  key={hs.id}
-                  className="p-4 bg-[#FBFAF7] border border-[#D6CFC3] rounded-sm flex items-center justify-between text-xs"
-                >
-                  <div className="space-y-1">
-                    <h4 className="font-serif-civic text-base font-bold text-[#161616]">
-                      {hs.primary_category || "Uncategorized"}{" "}
-                      {hs.complaint_count >= 2 ? "Cluster" : "Reported Location"}
-                    </h4>
-                    <p className="font-sans text-[#5D5A55]">
-                      Location: {hs.location_name || `Coordinates (${hs.latitude.toFixed(3)}, ${hs.longitude.toFixed(3)})`}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <Badge variant={hs.complaint_count >= 2 ? "critical" : "neutral"}>
-                      {formatPlural(hs.complaint_count, "Complaint", "Complaints")}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="font-sans text-xs text-[#5D5A55] italic py-4">
-              No recurring geographic hotspots detected yet.
-            </p>
-          )}
-        </Card>
-
-        {/* Derived Insight Callout: What the Data Shows */}
-        <Card variant="secondary" padding="lg" className="lg:col-span-5 border-[#D6CFC3] space-y-4">
+        {/* Derived Insight Callout */}
+        <Card variant="secondary" padding="lg" className="lg:col-span-6 border-[#D6CFC3] space-y-4">
           <h3 className="font-serif-civic text-xl font-bold text-[#161616]">
-            What the Data Shows
+            Operational Hotspot Insights
           </h3>
           <p className="font-sans text-xs text-[#5D5A55] leading-relaxed">
-            Deterministic insight callouts calculated from active complaint records:
+            Automated insight callouts calculated from active complaint records:
           </p>
 
           <div className="space-y-3 font-sans text-xs">

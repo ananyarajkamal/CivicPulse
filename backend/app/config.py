@@ -79,7 +79,6 @@ class Settings(BaseSettings):
         return [str(o) for o in self.ALLOWED_ORIGINS]
 
 
-
 @lru_cache
 def get_settings() -> Settings:
     """

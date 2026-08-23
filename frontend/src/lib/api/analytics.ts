@@ -3,6 +3,7 @@ import type {
   HotspotClusterItem,
   TrendDataPoint,
 } from "@/types/analytics";
+import { useAuthStore } from "@/store/authStore";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -22,6 +23,11 @@ async function fetchWithTimeout(
       ...options,
       signal: controller.signal,
     });
+
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+    }
+
     return response;
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {

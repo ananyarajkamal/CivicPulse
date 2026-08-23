@@ -50,6 +50,7 @@ def disable_limiter() -> None:
 @pytest.fixture
 async def client(setup_db: AsyncSession) -> AsyncClient:
     """Async test client with get_db overridden."""
+
     async def override_get_db() -> AsyncSession:
         yield setup_db
 
@@ -114,10 +115,14 @@ async def seed_data(setup_db: AsyncSession) -> dict:
     await setup_db.commit()
 
     officer1_token = create_access_token(
-        user_id=officer1.id, role=officer1.role.value, department_id=officer1.department_id
+        user_id=officer1.id,
+        role=officer1.role.value,
+        department_id=officer1.department_id,
     )
     officer2_token = create_access_token(
-        user_id=officer2.id, role=officer2.role.value, department_id=officer2.department_id
+        user_id=officer2.id,
+        role=officer2.role.value,
+        department_id=officer2.department_id,
     )
     admin_token = create_access_token(user_id=admin.id, role=admin.role.value)
 
@@ -276,7 +281,9 @@ class TestInternalComments:
         assert get_res.status_code == 200
         comments_list = get_res.json()
         assert len(comments_list) == 1
-        assert comments_list[0]["content"] == "Inspection scheduled for tomorrow morning."
+        assert (
+            comments_list[0]["content"] == "Inspection scheduled for tomorrow morning."
+        )
 
     async def test_public_tracking_does_not_expose_comments_or_assigned_officer(
         self, client: AsyncClient, seed_data: dict
@@ -322,3 +329,214 @@ class TestKPIEndpoint:
         assert kpis["unassigned_complaints"] == 1
         assert kpis["in_progress_complaints"] == 0
         assert kpis["resolved_complaints"] == 0
+
+
+class TestRejectionAndReopenWorkflow:
+    """Test cases A-I for Rejection and Reopen Workflow."""
+
+    async def test_rejection_without_reason_blocked(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject without reason -> 400
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "rejected"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 400
+        assert "rejection reason is required" in res.json()["detail"].lower()
+
+    async def test_rejection_with_reason_success(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject with reason -> 200
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Duplicate Complaint",
+                "notes": "Same pothole issue logged under CP-123",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"].lower() == "rejected"
+        assert "Duplicate Complaint" in data["resolution_notes"]
+
+    async def test_rejected_complaint_assignment_blocked(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject first
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Duplicate Complaint",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Attempt to assign officer to REJECTED complaint -> 400
+        res = await client.post(
+            f"/api/v1/complaints/{comp1.id}/assign",
+            json={"officer_id": str(seed_data["officer1"].id)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 400
+        assert "cannot assign" in res.json()["detail"].lower()
+
+    async def test_rejected_direct_in_progress_blocked(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject first
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Invalid / Spam Report",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Attempt direct transition REJECTED -> IN_PROGRESS -> 400
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "in_progress"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 400
+        assert "invalid status transition" in res.json()["detail"].lower()
+
+    async def test_reopen_without_reason_blocked(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject first
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Insufficient Information",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Reopen without reason -> 400
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={"to_status": "reported"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 400
+        assert "reason for reopening is required" in res.json()["detail"].lower()
+
+    async def test_reopen_with_reason_re_enters_as_reported(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        token = seed_data["officer1_token"]
+
+        # Reject first
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Insufficient Information",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Reopen with reason -> 200 (REPORTED)
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "reported",
+                "notes": "Citizen provided exact address details and site photos.",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"].lower() == "reported"
+        assert data["assigned_to"] is None
+
+        # Re-assign officer after reopen -> allowed
+        assign_res = await client.post(
+            f"/api/v1/complaints/{comp1.id}/assign",
+            json={"officer_id": str(seed_data["officer1"].id)},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert assign_res.status_code == 200
+        assert assign_res.json()["status"].lower() == "assigned"
+
+    async def test_cross_department_reopen_forbidden(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        roads_token = seed_data["officer1_token"]
+        water_token = seed_data["officer2_token"]
+
+        # Roads officer rejects Roads complaint
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Unable to Verify",
+            },
+            headers={"Authorization": f"Bearer {roads_token}"},
+        )
+
+        # Water officer attempts to reopen Roads complaint -> 403 Forbidden
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "reported",
+                "notes": "Cross dept reopen attempt",
+            },
+            headers={"Authorization": f"Bearer {water_token}"},
+        )
+        assert res.status_code == 403
+
+    async def test_admin_reopen_authorized_rejected_complaint(
+        self, client: AsyncClient, seed_data: dict
+    ) -> None:
+        comp1 = seed_data["comp1"]
+        roads_token = seed_data["officer1_token"]
+        admin_token = seed_data["admin_token"]
+
+        # Reject complaint
+        await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "rejected",
+                "rejection_reason": "Outside Municipal Jurisdiction",
+            },
+            headers={"Authorization": f"Bearer {roads_token}"},
+        )
+
+        # Admin reopens complaint -> 200
+        res = await client.patch(
+            f"/api/v1/complaints/{comp1.id}/status",
+            json={
+                "to_status": "reported",
+                "notes": "Admin verified location falls within ward 4 boundary.",
+            },
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert res.status_code == 200
+        assert res.json()["status"].lower() == "reported"

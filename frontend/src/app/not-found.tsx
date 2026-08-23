@@ -34,7 +34,7 @@ export default function NotFound() {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
               <Link href="/">
                 <Button variant="dark" size="md">
-                  Return Home →
+                  Return Home
                 </Button>
               </Link>
               <Link href="/#track">

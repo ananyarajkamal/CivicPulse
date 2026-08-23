@@ -47,7 +47,7 @@ export default function InternalCommentsPanel({
               Internal Staff Notes ({comments.length})
             </h3>
             <p className="font-sans text-xs text-[#5D5A55]">
-              Visible to municipal staff only — strictly confidential
+              Visible to municipal staff only: strictly confidential
             </p>
           </div>
         </div>

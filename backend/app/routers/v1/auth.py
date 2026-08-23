@@ -142,7 +142,9 @@ async def refresh_token(
     expires_at = (
         db_token.expires_at.replace(tzinfo=UTC)
         if db_token and db_token.expires_at.tzinfo is None
-        else db_token.expires_at if db_token else None
+        else db_token.expires_at
+        if db_token
+        else None
     )
 
     if not db_token or expires_at is None or expires_at < datetime.now(tz=UTC):
