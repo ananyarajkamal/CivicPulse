@@ -103,11 +103,19 @@ def create_app() -> FastAPI:
     # Middle: Security headers
     app.add_middleware(SecurityHeadersMiddleware)
 
+    origins = [
+        "https://civic-pulse-five-chi.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+    ] + settings.allowed_origins_list
+
     # Outermost: CORS — handles all OPTIONS preflight requests immediately
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins_list,
-        allow_origin_regex=r"https?://.*",
+        allow_origins=origins,
+        allow_origin_regex=r"https://.*\.vercel\.app|https?://.*",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
